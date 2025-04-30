@@ -24,6 +24,15 @@ def plot_consumption_patterns(consumption_df, customers_df, selected_customers=N
     fig : plotly.graph_objects.Figure
         Plotly figure object
     """
+    if consumption_df.empty or customers_df.empty:
+        # Return empty figure if no data
+        fig = go.Figure()
+        fig.update_layout(
+            title="No data available for consumption patterns",
+            height=500
+        )
+        return fig
+    
     if selected_customers is not None:
         consumption_df = consumption_df[consumption_df['customer_id'].isin(selected_customers)]
     
@@ -32,6 +41,15 @@ def plot_consumption_patterns(consumption_df, customers_df, selected_customers=N
         customers_df[['customer_id', 'stratum']], 
         on='customer_id'
     )
+    
+    if plot_data.empty:
+        # Return empty figure if no data after merging
+        fig = go.Figure()
+        fig.update_layout(
+            title="No consumption data available for selected criteria",
+            height=500
+        )
+        return fig
     
     # Convert stratum to string for better legend
     plot_data['stratum'] = 'Stratum ' + plot_data['stratum'].astype(str)
@@ -74,8 +92,29 @@ def create_anomaly_map(customers_df, anomaly_scores, threshold):
     # Create base map centered on Medellín
     m = folium.Map(location=[6.25, -75.58], zoom_start=12)
     
+    # Check if data is available
+    if customers_df.empty or len(anomaly_scores) == 0:
+        # Add a message to the map
+        folium.Marker(
+            location=[6.25, -75.58],
+            popup="No data available for the selected filters",
+            icon=folium.Icon(color="gray")
+        ).add_to(m)
+        return m
+    
+    # Ensure we have the same number of customers and scores
+    if len(customers_df) != len(anomaly_scores):
+        # Use only the common subset
+        n_samples = min(len(customers_df), len(anomaly_scores))
+        customers_df = customers_df.iloc[:n_samples].reset_index(drop=True)
+        anomaly_scores = anomaly_scores[:n_samples]
+    
     # Add markers for each customer
     for idx, row in customers_df.iterrows():
+        # Ensure we don't go out of bounds
+        if idx >= len(anomaly_scores):
+            break
+            
         score = anomaly_scores[idx]
         is_anomaly = score > threshold
         
@@ -138,6 +177,15 @@ def plot_anomaly_distribution(anomaly_scores, threshold):
     """
     fig = go.Figure()
     
+    if len(anomaly_scores) == 0:
+        fig.update_layout(
+            title='No data available for anomaly score distribution',
+            xaxis_title='Anomaly Score',
+            yaxis_title='Count',
+            height=400
+        )
+        return fig
+    
     fig.add_trace(go.Histogram(
         x=anomaly_scores,
         name='Score Distribution',
@@ -179,6 +227,15 @@ def plot_feature_importance(model, feature_names):
     fig : plotly.graph_objects.Figure
         Plotly figure object
     """
+    fig = go.Figure()
+    
+    if not model.fitted or len(feature_names) == 0:
+        fig.update_layout(
+            title='Model not fitted or no features available',
+            height=400
+        )
+        return fig
+    
     # Calculate feature importance using covariance matrix
     importance = np.abs(np.diag(model.cov_estimator.covariance_))
     
@@ -218,6 +275,22 @@ def plot_stratum_distribution(customers_df, anomaly_mask):
     fig : plotly.graph_objects.Figure
         Plotly figure object
     """
+    fig = go.Figure()
+    
+    if customers_df.empty or len(anomaly_mask) == 0:
+        fig.update_layout(
+            title='No data available for stratum distribution',
+            height=400
+        )
+        return fig
+    
+    # Make sure the mask is the right length
+    if len(anomaly_mask) != len(customers_df):
+        # Use only the available data
+        n_samples = min(len(customers_df), len(anomaly_mask))
+        customers_df = customers_df.iloc[:n_samples].reset_index(drop=True)
+        anomaly_mask = anomaly_mask[:n_samples]
+    
     # Count anomalies by stratum
     strata_counts = pd.DataFrame({
         'Stratum': customers_df['stratum'].astype(int),
@@ -261,6 +334,22 @@ def plot_scatter_comparison(features, anomaly_mask):
     fig : plotly.graph_objects.Figure
         Plotly figure object
     """
+    fig = go.Figure()
+    
+    if features.empty or len(anomaly_mask) == 0:
+        fig.update_layout(
+            title='No data available for consumption comparison',
+            height=500
+        )
+        return fig
+    
+    # Make sure the mask is the right length
+    if len(anomaly_mask) != len(features):
+        # Use only the available data
+        n_samples = min(len(features), len(anomaly_mask))
+        features = features.iloc[:n_samples].reset_index(drop=True)
+        anomaly_mask = anomaly_mask[:n_samples]
+    
     scatter_data = pd.DataFrame({
         'Previous Month': features['consumption_prev'],
         'Current Month': features['consumption_current'],
@@ -279,15 +368,17 @@ def plot_scatter_comparison(features, anomaly_mask):
     )
     
     # Add diagonal line (y=x)
-    fig.add_trace(
-        go.Scatter(
-            x=[0, scatter_data[['Previous Month', 'Current Month']].max().max()],
-            y=[0, scatter_data[['Previous Month', 'Current Month']].max().max()],
-            mode='lines',
-            line=dict(color='grey', dash='dash'),
-            name='Same Consumption Line'
+    max_val = scatter_data[['Previous Month', 'Current Month']].max().max()
+    if not np.isnan(max_val):
+        fig.add_trace(
+            go.Scatter(
+                x=[0, max_val],
+                y=[0, max_val],
+                mode='lines',
+                line=dict(color='grey', dash='dash'),
+                name='Same Consumption Line'
+            )
         )
-    )
     
     fig.update_layout(
         height=500,
@@ -315,10 +406,27 @@ def create_kpi_cards(anomaly_scores, threshold, customers_df):
     kpi_metrics : dict
         Dictionary of KPI metrics
     """
+    # Handle empty data case
+    if len(anomaly_scores) == 0 or customers_df.empty:
+        return {
+            'total_customers': 0,
+            'anomalies_detected': 0,
+            'detection_rate': 0,
+            'precision': None,
+            'recall': None,
+            'f1': None
+        }
+    
+    # Make sure we have matching length
+    if len(anomaly_scores) != len(customers_df):
+        n_samples = min(len(customers_df), len(anomaly_scores))
+        customers_df = customers_df.iloc[:n_samples].reset_index(drop=True)
+        anomaly_scores = anomaly_scores[:n_samples]
+    
     anomaly_mask = anomaly_scores > threshold
     total_customers = len(customers_df)
     anomalies_detected = sum(anomaly_mask)
-    detection_rate = (anomalies_detected / total_customers) * 100
+    detection_rate = (anomalies_detected / total_customers) * 100 if total_customers > 0 else 0
     
     # If we have ground truth (is_fraudulent)
     if 'is_fraudulent' in customers_df.columns:
@@ -368,23 +476,39 @@ def plot_heatmap(data, x_field, y_field, value_field, title=None):
     fig : plotly.graph_objects.Figure
         Plotly figure object
     """
+    fig = go.Figure()
+    
+    if data.empty:
+        fig.update_layout(
+            title='No data available for heatmap',
+            height=400
+        )
+        return fig
+    
     # Pivot data for heatmap
-    heatmap_data = data.pivot_table(
-        index=y_field, 
-        columns=x_field, 
-        values=value_field,
-        aggfunc='mean'
-    )
-    
-    fig = px.imshow(
-        heatmap_data,
-        labels=dict(x=x_field, y=y_field, color=value_field),
-        x=heatmap_data.columns,
-        y=heatmap_data.index,
-        color_continuous_scale="Viridis"
-    )
-    
-    if title:
-        fig.update_layout(title=title)
+    try:
+        heatmap_data = data.pivot_table(
+            index=y_field, 
+            columns=x_field, 
+            values=value_field,
+            aggfunc='mean'
+        )
+        
+        fig = px.imshow(
+            heatmap_data,
+            labels=dict(x=x_field, y=y_field, color=value_field),
+            x=heatmap_data.columns,
+            y=heatmap_data.index,
+            color_continuous_scale="Viridis"
+        )
+        
+        if title:
+            fig.update_layout(title=title)
+            
+    except Exception as e:
+        fig.update_layout(
+            title=f'Error creating heatmap: {str(e)}',
+            height=400
+        )
     
     return fig
