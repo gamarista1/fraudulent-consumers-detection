@@ -2,9 +2,6 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-import folium
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 def plot_consumption_patterns(consumption_df, customers_df, selected_customers=None):
     """
@@ -73,12 +70,12 @@ def plot_consumption_patterns(consumption_df, customers_df, selected_customers=N
 
 def create_anomaly_map(customers_df, anomaly_scores, threshold):
     """
-    Create an interactive map with anomaly scores.
+    Create an interactive map with enhanced anomaly information.
     
     Parameters:
     -----------
     customers_df : DataFrame
-        Customer information with coordinates
+        Customer information with coordinates and attributes
     anomaly_scores : array-like
         Anomaly scores for each customer
     threshold : float
@@ -87,8 +84,12 @@ def create_anomaly_map(customers_df, anomaly_scores, threshold):
     Returns:
     --------
     m : folium.Map
-        Folium map object
+        Folium map object with detailed customer markers
     """
+    import folium
+    from folium.plugins import MarkerCluster
+    import numpy as np
+    
     # Create base map centered on Medellín
     m = folium.Map(location=[6.25, -75.58], zoom_start=12)
     
@@ -109,7 +110,34 @@ def create_anomaly_map(customers_df, anomaly_scores, threshold):
         customers_df = customers_df.iloc[:n_samples].reset_index(drop=True)
         anomaly_scores = anomaly_scores[:n_samples]
     
-    # Add markers for each customer
+    # Create marker clusters for better performance with many points
+    normal_cluster = MarkerCluster(name="Normal Consumers").add_to(m)
+    anomaly_cluster = MarkerCluster(name="Anomalies").add_to(m)
+    
+    # Calculate normalized scores for color gradient (0-100 scale)
+    if len(anomaly_scores) > 1:
+        max_score = np.max(anomaly_scores)
+        min_score = np.min(anomaly_scores)
+        score_range = max_score - min_score
+        if score_range > 0:
+            normalized_scores = 100 * (anomaly_scores - min_score) / score_range
+        else:
+            normalized_scores = np.ones_like(anomaly_scores) * 50
+    else:
+        normalized_scores = np.ones_like(anomaly_scores) * 50
+    
+    # Define risk levels and colors
+    def get_risk_level(norm_score):
+        if norm_score >= 80:
+            return "Critical", "#d32f2f"  # dark red
+        elif norm_score >= 60:
+            return "High", "#f57c00"  # orange
+        elif norm_score >= 40:
+            return "Medium", "#ffd166"  # yellow
+        else:
+            return "Low", "#06d6a0"  # green
+    
+    # Add markers for each customer with detailed information
     for idx, row in customers_df.iterrows():
         # Ensure we don't go out of bounds
         if idx >= len(anomaly_scores):
@@ -117,41 +145,81 @@ def create_anomaly_map(customers_df, anomaly_scores, threshold):
             
         score = anomaly_scores[idx]
         is_anomaly = score > threshold
+        norm_score = normalized_scores[idx]
+        risk_level, color = get_risk_level(norm_score)
         
-        # Define color based on anomaly score
-        color = 'red' if is_anomaly else 'blue'
-        radius = 8 if is_anomaly else 5
+        # Get additional customer attributes for popup - asegurando que todo sea string
+        stratum = str(row.get('stratum', 'N/A'))
+        zone = str(row.get('zone_code', 'N/A'))
+        customer_id = str(row.get('customer_id', f'C{idx:04d}'))
+        sanctioned_load = str(row.get('sanctioned_load', 'N/A'))
         
-        # Create popup content
-        popup_content = f"""
-        <b>Customer ID:</b> {row['customer_id']}<br>
-        <b>Stratum:</b> {int(row['stratum'])}<br>
-        <b>Zone:</b> {row['zone_code']}<br>
-        <b>Anomaly Score:</b> {score:.2f}<br>
-        <b>Threshold:</b> {threshold:.2f}<br>
-        <b>Is Anomaly:</b> {'Yes' if is_anomaly else 'No'}
-        """
+        # Ensure coordinates are floats
+        try:
+            lat = float(row['latitude'])
+            lng = float(row['longitude'])
+        except (ValueError, TypeError):
+            # Skip this point if coordinates are invalid
+            continue
         
-        folium.CircleMarker(
-            location=[row['latitude'], row['longitude']],
-            radius=radius,
-            color=color,
-            fill=True,
-            fill_opacity=0.7,
-            popup=folium.Popup(popup_content, max_width=300)
-        ).add_to(m)
+        # Add fraudulent status if available - asegurando que sea boolean
+        is_known_fraudulent = bool(row.get('is_fraudulent', False))
+        fraud_type = str(row.get('fraud_type', 'Unknown'))
+        
+        # Create simplified HTML popup
+        if is_anomaly:
+            popup_html = f"""
+            <div style="font-family: Arial; max-width: 250px;">
+                <h4 style="color: {color};">Anomaly Detected</h4>
+                <p><b>Customer ID:</b> {customer_id}</p>
+                <p><b>Stratum:</b> {stratum}</p>
+                <p><b>Zone:</b> {zone}</p>
+                <p><b>Anomaly Score:</b> {score:.2f}</p>
+                <p><b>Risk Level:</b> {risk_level}</p>
+            </div>
+            """
+        else:
+            popup_html = f"""
+            <div style="font-family: Arial; max-width: 250px;">
+                <h4>Normal Consumer</h4>
+                <p><b>Customer ID:</b> {customer_id}</p>
+                <p><b>Stratum:</b> {stratum}</p>
+                <p><b>Zone:</b> {zone}</p>
+                <p><b>Anomaly Score:</b> {score:.2f}</p>
+            </div>
+            """
+        
+        # Create marker
+        icon_color = color if is_anomaly else 'blue'
+        
+        # Create basic marker without fancy options
+        marker = folium.Marker(
+            location=[lat, lng],
+            popup=folium.Popup(popup_html, max_width=300),
+            tooltip=f"{'Anomaly' if is_anomaly else 'Normal'} - {customer_id}",
+            icon=folium.Icon(color=icon_color)
+        )
+        
+        # Add marker to appropriate cluster
+        if is_anomaly:
+            marker.add_to(anomaly_cluster)
+        else:
+            marker.add_to(normal_cluster)
     
-    # Add legend
+    # Add layer control to toggle layers
+    folium.LayerControl().add_to(m)
+    
+    # Add simple legend
     legend_html = '''
     <div style="position: fixed; 
-        bottom: 50px; left: 50px; width: 150px; height: 90px; 
-        border:2px solid grey; z-index:9999; font-size:14px;
-        background-color:white;
+        bottom: 50px; left: 50px; width: 150px; 
+        border: 2px solid grey; z-index:9999; font-size:14px;
+        background-color: white;
         padding: 10px;
         border-radius: 5px;
         ">
-    <p><span style="color:blue;font-size:24px;">●</span> Normal</p>
-    <p><span style="color:red;font-size:24px;">●</span> Anomaly</p>
+    <p><span style="color:blue;font-size:20px;">●</span> Normal</p>
+    <p><span style="color:red;font-size:20px;">●</span> Anomaly</p>
     </div>
     '''
     
@@ -510,5 +578,91 @@ def plot_heatmap(data, x_field, y_field, value_field, title=None):
             title=f'Error creating heatmap: {str(e)}',
             height=400
         )
+    
+    return fig
+
+def plot_time_series_anomalies(consumption_df, customer_ids, anomaly_dates=None):
+    """
+    Plot time series data with highlighted anomaly periods.
+    
+    Parameters:
+    -----------
+    consumption_df : DataFrame
+        Consumption data with date and consumption columns
+    customer_ids : list
+        List of customer IDs to include
+    anomaly_dates : dict, optional
+        Dictionary mapping customer_ids to lists of anomaly dates
+        
+    Returns:
+    --------
+    fig : plotly.graph_objects.Figure
+        Plotly figure object
+    """
+    if consumption_df.empty or not customer_ids:
+        fig = go.Figure()
+        fig.update_layout(
+            title='No data available for time series analysis',
+            height=500
+        )
+        return fig
+    
+    # Filter consumption data for selected customers
+    filtered_df = consumption_df[consumption_df['customer_id'].isin(customer_ids)]
+    
+    if filtered_df.empty:
+        fig = go.Figure()
+        fig.update_layout(
+            title='No consumption data for selected customers',
+            height=500
+        )
+        return fig
+    
+    # Create figure
+    fig = go.Figure()
+    
+    # Add consumption time series for each customer
+    for customer_id in customer_ids:
+        customer_data = filtered_df[filtered_df['customer_id'] == customer_id]
+        
+        if not customer_data.empty:
+            fig.add_trace(go.Scatter(
+                x=customer_data['date'],
+                y=customer_data['consumption'],
+                mode='lines+markers',
+                name=f'Customer {customer_id}',
+                hovertemplate='Date: %{x}<br>Consumption: %{y:.1f} kWh<br>Customer: ' + customer_id
+            ))
+    
+    # Add shaded areas for anomaly periods if provided
+    if anomaly_dates and isinstance(anomaly_dates, dict):
+        for customer_id, dates in anomaly_dates.items():
+            if customer_id in customer_ids:
+                for anomaly_date in dates:
+                    fig.add_vrect(
+                        x0=anomaly_date,
+                        x1=pd.to_datetime(anomaly_date) + pd.Timedelta(days=30),  # Assuming monthly data
+                        fillcolor="red",
+                        opacity=0.2,
+                        layer="below",
+                        line_width=0,
+                        annotation_text="Anomaly",
+                        annotation_position="top left"
+                    )
+    
+    fig.update_layout(
+        title='Consumption Time Series with Anomaly Detection',
+        xaxis_title='Date',
+        yaxis_title='Consumption (kWh)',
+        hovermode="x unified",
+        height=500,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        )
+    )
     
     return fig

@@ -55,7 +55,8 @@ def load_sample_data():
     
     # Generate features for normal and fraudulent consumers
     # We'll create a time series for 24 months
-    months = pd.date_range(start='2021-01-01', periods=24, freq='M')
+    # Corregido: usar 'ME' en lugar de 'M' para evitar la advertencia de obsolescencia
+    months = pd.date_range(start='2021-01-01', periods=24, freq='ME')
     
     # Normal consumption patterns by strata (higher consumption for higher strata)
     base_consumption = {
@@ -173,6 +174,10 @@ def prepare_features(customers_df, consumption_df, weather_df, selected_month=No
     filtered_customers : DataFrame
         Filtered customer information
     """
+    # Verificar si hay datos válidos
+    if customers_df.empty or consumption_df.empty:
+        return pd.DataFrame(), pd.Series(), pd.DataFrame()
+    
     # Filter data if month and year are selected
     if selected_month and selected_year:
         current_month_data = consumption_df[(consumption_df['month'] == selected_month) & 
@@ -202,6 +207,10 @@ def prepare_features(customers_df, consumption_df, weather_df, selected_month=No
     else:
         filtered_customers = customers_df
     
+    # Verificar si hay datos después del filtrado
+    if current_month_data.empty or prev_month_data.empty:
+        return pd.DataFrame(), pd.Series(), filtered_customers
+    
     # Merge current and previous month data
     merged_data = pd.merge(
         current_month_data[['customer_id', 'consumption']], 
@@ -211,6 +220,10 @@ def prepare_features(customers_df, consumption_df, weather_df, selected_month=No
         suffixes=('_current', '_prev')
     )
     
+    # Verificar si hay datos después del merge
+    if merged_data.empty:
+        return pd.DataFrame(), pd.Series(), filtered_customers
+    
     # Add customer information (stratum, sanctioned load)
     features = pd.merge(
         merged_data, 
@@ -219,10 +232,20 @@ def prepare_features(customers_df, consumption_df, weather_df, selected_month=No
         how='inner'
     )
     
-    # Calculate additional features
-    features['consumption_ratio'] = features['consumption_current'] / features['consumption_prev']
+    # Calculate additional features with manejo seguro de divisiones por cero
+    features['consumption_ratio'] = features.apply(
+        lambda row: row['consumption_current'] / row['consumption_prev'] 
+        if row['consumption_prev'] > 0 else 1.0, 
+        axis=1
+    )
+    
     features['consumption_diff'] = features['consumption_current'] - features['consumption_prev']
-    features['per_capita_consumption'] = features['consumption_current'] / features['sanctioned_load']
+    
+    features['per_capita_consumption'] = features.apply(
+        lambda row: row['consumption_current'] / row['sanctioned_load'] 
+        if row['sanctioned_load'] > 0 else row['consumption_current'], 
+        axis=1
+    )
     
     # Get current month's weather
     if selected_month and selected_year:
@@ -232,14 +255,45 @@ def prepare_features(customers_df, consumption_df, weather_df, selected_month=No
         current_weather = weather_df[weather_df['date'] == latest_date]
     
     # Add weather information (will be the same for all customers in the same period)
+    # Manejo mejorado de errores
     if not current_weather.empty:
-        temp = current_weather['temperature'].iloc[0]
-        humidity = current_weather['humidity'].iloc[0]
-        uv = current_weather['uv_index'].iloc[0]
-        
-        features['temperature'] = temp
-        features['humidity'] = humidity
-        features['uv_index'] = uv
+        try:
+            temp = current_weather['temperature'].iloc[0]
+            humidity = current_weather['humidity'].iloc[0]
+            uv = current_weather['uv_index'].iloc[0]
+            
+            features['temperature'] = temp
+            features['humidity'] = humidity
+            features['uv_index'] = uv
+        except (IndexError, KeyError) as e:
+            # Usar valores predeterminados si hay algún error
+            features['temperature'] = 22  # Temperatura promedio para Medellín
+            features['humidity'] = 80     # Humedad promedio
+            features['uv_index'] = 10     # Índice UV promedio
+    else:
+        # Si no hay datos de clima, usar valores predeterminados
+        features['temperature'] = 22
+        features['humidity'] = 80
+        features['uv_index'] = 10
+    
+    # Convertir explícitamente a tipos numéricos para evitar errores
+    numeric_columns = ['consumption_current', 'consumption_prev', 'consumption_ratio', 
+                     'consumption_diff', 'temperature', 'humidity', 'uv_index', 
+                     'stratum', 'sanctioned_load', 'per_capita_consumption']
+    
+    for col in numeric_columns:
+        if col in features.columns:
+            features[col] = pd.to_numeric(features[col], errors='coerce')
+    
+    # Manejar valores NaN
+    features = features.fillna({
+        'consumption_ratio': 1.0,
+        'consumption_diff': 0,
+        'per_capita_consumption': features['consumption_current'].mean(),
+        'temperature': 22,
+        'humidity': 80,
+        'uv_index': 10
+    })
     
     # Store customer_id for reference but drop it for modeling
     customer_ids = features['customer_id']
@@ -267,6 +321,9 @@ def clean_data(data_df, columns=None, min_consumption=0, max_consumption=None):
     cleaned_df : DataFrame
         Cleaned data
     """
+    if data_df.empty:
+        return data_df.copy()
+        
     if columns is None:
         columns = data_df.columns
     
@@ -333,6 +390,10 @@ def calculate_monthly_stats(consumption_df, group_by='stratum'):
     monthly_stats : DataFrame
         Monthly statistics by group
     """
+    # Verificar si hay datos
+    if consumption_df.empty:
+        return pd.DataFrame()
+        
     # Merge with customers data if necessary
     if group_by not in consumption_df.columns:
         raise ValueError(f"Column '{group_by}' not found in consumption data")
@@ -367,6 +428,13 @@ def detect_consumption_changes(consumption_df, customer_ids=None, threshold=50, 
     changes_df : DataFrame
         DataFrame with flagged consumption changes
     """
+    # Verificar si hay datos
+    if consumption_df.empty:
+        return pd.DataFrame(columns=[
+            'customer_id', 'date', 'consumption', 'previous_avg', 
+            'percent_change', 'direction'
+        ])
+    
     if customer_ids is None:
         customer_ids = consumption_df['customer_id'].unique()
     
@@ -389,18 +457,20 @@ def detect_consumption_changes(consumption_df, customer_ids=None, threshold=50, 
             current = valid_history.iloc[i]
             previous = valid_history.iloc[i-1]
             
-            percent_change = ((current['consumption'] - previous['rolling_avg']) / 
-                             previous['rolling_avg'] * 100)
-            
-            if abs(percent_change) >= threshold:
-                changes.append({
-                    'customer_id': customer_id,
-                    'date': current['date'],
-                    'consumption': current['consumption'],
-                    'previous_avg': previous['rolling_avg'],
-                    'percent_change': percent_change,
-                    'direction': 'increase' if percent_change > 0 else 'decrease'
-                })
+            # Evitar división por cero
+            if previous['rolling_avg'] > 0:
+                percent_change = ((current['consumption'] - previous['rolling_avg']) / 
+                                 previous['rolling_avg'] * 100)
+                
+                if abs(percent_change) >= threshold:
+                    changes.append({
+                        'customer_id': customer_id,
+                        'date': current['date'],
+                        'consumption': current['consumption'],
+                        'previous_avg': previous['rolling_avg'],
+                        'percent_change': percent_change,
+                        'direction': 'increase' if percent_change > 0 else 'decrease'
+                    })
     
     if changes:
         return pd.DataFrame(changes)
@@ -426,6 +496,10 @@ def integrate_weather_data(consumption_df, weather_df):
     integrated_df : DataFrame
         Consumption data with added weather information
     """
+    # Verificar si hay datos
+    if consumption_df.empty or weather_df.empty:
+        return consumption_df.copy()
+    
     # Ensure date columns are datetime
     consumption_df['date'] = pd.to_datetime(consumption_df['date'])
     weather_df['date'] = pd.to_datetime(weather_df['date'])
