@@ -3,7 +3,18 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
-def plot_consumption_patterns(consumption_df, customers_df, selected_customers=None):
+def plot_consumption_patterns(
+    consumption_df,
+    customers_df,
+    selected_customers=None,
+    title_text="Consumption Patterns by Socioeconomic Stratum",
+    x_label="Date",
+    y_label="Monthly Consumption (kWh)",
+    legend_title="Socioeconomic Stratum",
+    stratum_prefix="Stratum ",
+    no_data_title="No data available for consumption patterns",
+    no_data_filtered_title="No consumption data available for selected criteria"
+):
     """
     Plot consumption patterns over time by socioeconomic stratum.
     
@@ -24,10 +35,7 @@ def plot_consumption_patterns(consumption_df, customers_df, selected_customers=N
     if consumption_df.empty or customers_df.empty:
         # Return empty figure if no data
         fig = go.Figure()
-        fig.update_layout(
-            title="No data available for consumption patterns",
-            height=500
-        )
+        fig.update_layout(title=no_data_title, height=500)
         return fig
     
     if selected_customers is not None:
@@ -42,33 +50,30 @@ def plot_consumption_patterns(consumption_df, customers_df, selected_customers=N
     if plot_data.empty:
         # Return empty figure if no data after merging
         fig = go.Figure()
-        fig.update_layout(
-            title="No consumption data available for selected criteria",
-            height=500
-        )
+        fig.update_layout(title=no_data_filtered_title, height=500)
         return fig
     
     # Convert stratum to string for better legend
-    plot_data['stratum'] = 'Stratum ' + plot_data['stratum'].astype(str)
+    plot_data['stratum'] = stratum_prefix + plot_data['stratum'].astype(str)
     
     fig = px.line(
         plot_data,
         x='date',
         y='consumption',
         color='stratum',
-        title='Consumption Patterns by Socioeconomic Stratum',
-        labels={'consumption': 'Monthly Consumption (kWh)', 'date': 'Date'}
+        title=title_text,
+        labels={'consumption': y_label, 'date': x_label}
     )
     
     fig.update_layout(
         height=500,
-        legend_title="Socioeconomic Stratum",
+        legend_title=legend_title,
         hovermode="x unified"
     )
     
     return fig
 
-def create_anomaly_map(customers_df, anomaly_scores, threshold):
+def create_anomaly_map(customers_df, anomaly_scores, threshold, text=None):
     """
     Create an interactive map with enhanced anomaly information.
     
@@ -90,6 +95,9 @@ def create_anomaly_map(customers_df, anomaly_scores, threshold):
     from folium.plugins import MarkerCluster
     import numpy as np
     
+    if text is None:
+        text = {}
+
     # Create base map centered on Medellín
     m = folium.Map(location=[6.25, -75.58], zoom_start=12)
     
@@ -98,7 +106,7 @@ def create_anomaly_map(customers_df, anomaly_scores, threshold):
         # Add a message to the map
         folium.Marker(
             location=[6.25, -75.58],
-            popup="No data available for the selected filters",
+            popup=text.get("no_data", "No data available for the selected filters"),
             icon=folium.Icon(color="gray")
         ).add_to(m)
         return m
@@ -111,8 +119,8 @@ def create_anomaly_map(customers_df, anomaly_scores, threshold):
         anomaly_scores = anomaly_scores[:n_samples]
     
     # Create marker clusters for better performance with many points
-    normal_cluster = MarkerCluster(name="Normal Consumers").add_to(m)
-    anomaly_cluster = MarkerCluster(name="Anomalies").add_to(m)
+    normal_cluster = MarkerCluster(name=text.get("cluster_normal", "Normal Consumers")).add_to(m)
+    anomaly_cluster = MarkerCluster(name=text.get("cluster_anomaly", "Anomalies")).add_to(m)
     
     # Calculate normalized scores for color gradient (0-100 scale)
     if len(anomaly_scores) > 1:
@@ -127,15 +135,17 @@ def create_anomaly_map(customers_df, anomaly_scores, threshold):
         normalized_scores = np.ones_like(anomaly_scores) * 50
     
     # Define risk levels and colors
+    risk_labels = text.get("risk_levels", {})
+
     def get_risk_level(norm_score):
         if norm_score >= 80:
-            return "Critical", "#d32f2f"  # dark red
+            return risk_labels.get("critical", "Critical"), "#d32f2f"  # dark red
         elif norm_score >= 60:
-            return "High", "#f57c00"  # orange
+            return risk_labels.get("high", "High"), "#f57c00"  # orange
         elif norm_score >= 40:
-            return "Medium", "#ffd166"  # yellow
+            return risk_labels.get("medium", "Medium"), "#ffd166"  # yellow
         else:
-            return "Low", "#06d6a0"  # green
+            return risk_labels.get("low", "Low"), "#06d6a0"  # green
     
     # Add markers for each customer with detailed information
     for idx, row in customers_df.iterrows():
@@ -170,22 +180,22 @@ def create_anomaly_map(customers_df, anomaly_scores, threshold):
         if is_anomaly:
             popup_html = f"""
             <div style="font-family: Arial; max-width: 250px;">
-                <h4 style="color: {color};">Anomaly Detected</h4>
-                <p><b>Customer ID:</b> {customer_id}</p>
-                <p><b>Stratum:</b> {stratum}</p>
-                <p><b>Zone:</b> {zone}</p>
-                <p><b>Anomaly Score:</b> {score:.2f}</p>
-                <p><b>Risk Level:</b> {risk_level}</p>
+                <h4 style="color: {color};">{text.get("popup_anomaly_title", "Anomaly Detected")}</h4>
+                <p><b>{text.get("label_customer_id", "Customer ID")}:</b> {customer_id}</p>
+                <p><b>{text.get("label_stratum", "Stratum")}:</b> {stratum}</p>
+                <p><b>{text.get("label_zone", "Zone")}:</b> {zone}</p>
+                <p><b>{text.get("label_anomaly_score", "Anomaly Score")}:</b> {score:.2f}</p>
+                <p><b>{text.get("label_risk_level", "Risk Level")}:</b> {risk_level}</p>
             </div>
             """
         else:
             popup_html = f"""
             <div style="font-family: Arial; max-width: 250px;">
-                <h4>Normal Consumer</h4>
-                <p><b>Customer ID:</b> {customer_id}</p>
-                <p><b>Stratum:</b> {stratum}</p>
-                <p><b>Zone:</b> {zone}</p>
-                <p><b>Anomaly Score:</b> {score:.2f}</p>
+                <h4>{text.get("popup_normal_title", "Normal Consumer")}</h4>
+                <p><b>{text.get("label_customer_id", "Customer ID")}:</b> {customer_id}</p>
+                <p><b>{text.get("label_stratum", "Stratum")}:</b> {stratum}</p>
+                <p><b>{text.get("label_zone", "Zone")}:</b> {zone}</p>
+                <p><b>{text.get("label_anomaly_score", "Anomaly Score")}:</b> {score:.2f}</p>
             </div>
             """
         
@@ -196,7 +206,7 @@ def create_anomaly_map(customers_df, anomaly_scores, threshold):
         marker = folium.Marker(
             location=[lat, lng],
             popup=folium.Popup(popup_html, max_width=300),
-            tooltip=f"{'Anomaly' if is_anomaly else 'Normal'} - {customer_id}",
+            tooltip=f"{text.get('tooltip_anomaly', 'Anomaly') if is_anomaly else text.get('tooltip_normal', 'Normal')} - {customer_id}",
             icon=folium.Icon(color=icon_color)
         )
         
@@ -218,8 +228,8 @@ def create_anomaly_map(customers_df, anomaly_scores, threshold):
         padding: 10px;
         border-radius: 5px;
         ">
-    <p><span style="color:blue;font-size:20px;">●</span> Normal</p>
-    <p><span style="color:red;font-size:20px;">●</span> Anomaly</p>
+    <p><span style="color:blue;font-size:20px;">●</span> {text.get("legend_normal", "Normal")}</p>
+    <p><span style="color:red;font-size:20px;">●</span> {text.get("legend_anomaly", "Anomaly")}</p>
     </div>
     '''
     
@@ -227,7 +237,15 @@ def create_anomaly_map(customers_df, anomaly_scores, threshold):
     
     return m
 
-def plot_anomaly_distribution(anomaly_scores, threshold):
+def plot_anomaly_distribution(
+    anomaly_scores,
+    threshold,
+    title_text="Distribution of Anomaly Scores",
+    x_label="Anomaly Score",
+    y_label="Count",
+    threshold_label="Anomaly Threshold",
+    no_data_title="No data available for anomaly score distribution"
+):
     """
     Plot distribution of anomaly scores.
     
@@ -247,9 +265,9 @@ def plot_anomaly_distribution(anomaly_scores, threshold):
     
     if len(anomaly_scores) == 0:
         fig.update_layout(
-            title='No data available for anomaly score distribution',
-            xaxis_title='Anomaly Score',
-            yaxis_title='Count',
+            title=no_data_title,
+            xaxis_title=x_label,
+            yaxis_title=y_label,
             height=400
         )
         return fig
@@ -265,21 +283,26 @@ def plot_anomaly_distribution(anomaly_scores, threshold):
         x=threshold,
         line_dash="dash",
         line_color="red",
-        annotation_text="Anomaly Threshold",
+        annotation_text=threshold_label,
         annotation_position="top right"
     )
     
     fig.update_layout(
-        title='Distribution of Anomaly Scores',
-        xaxis_title='Anomaly Score',
-        yaxis_title='Count',
+        title=title_text,
+        xaxis_title=x_label,
+        yaxis_title=y_label,
         height=400,
         margin=dict(l=40, r=40, t=50, b=40)
     )
     
     return fig
 
-def plot_feature_importance(model, feature_names):
+def plot_feature_importance(
+    model,
+    feature_names,
+    title_text="Feature Importance in Anomaly Detection",
+    no_data_title="Model not fitted or no features available"
+):
     """
     Plot feature importance based on MGD components.
     
@@ -298,10 +321,7 @@ def plot_feature_importance(model, feature_names):
     fig = go.Figure()
     
     if not model.fitted or len(feature_names) == 0:
-        fig.update_layout(
-            title='Model not fitted or no features available',
-            height=400
-        )
+        fig.update_layout(title=no_data_title, height=400)
         return fig
     
     # Calculate feature importance using covariance matrix
@@ -318,7 +338,7 @@ def plot_feature_importance(model, feature_names):
         x='Importance',
         y='Feature',
         orientation='h',
-        title='Feature Importance in Anomaly Detection',
+        title=title_text,
         color='Importance',
         color_continuous_scale='Viridis'
     )
@@ -327,7 +347,16 @@ def plot_feature_importance(model, feature_names):
     
     return fig
 
-def plot_stratum_distribution(customers_df, anomaly_mask):
+def plot_stratum_distribution(
+    customers_df,
+    anomaly_mask,
+    title_text="Distribution of Customers by Stratum",
+    x_label="Socioeconomic Stratum",
+    y_label="Number of Customers",
+    status_anomaly="Anomaly",
+    status_normal="Normal",
+    no_data_title="No data available for stratum distribution"
+):
     """
     Plot distribution of anomalies by socioeconomic stratum.
     
@@ -346,10 +375,7 @@ def plot_stratum_distribution(customers_df, anomaly_mask):
     fig = go.Figure()
     
     if customers_df.empty or len(anomaly_mask) == 0:
-        fig.update_layout(
-            title='No data available for stratum distribution',
-            height=400
-        )
+        fig.update_layout(title=no_data_title, height=400)
         return fig
     
     # Make sure the mask is the right length
@@ -366,7 +392,7 @@ def plot_stratum_distribution(customers_df, anomaly_mask):
     })
     
     strata_agg = strata_counts.groupby(['Stratum', 'Is_Anomaly']).size().reset_index(name='Count')
-    strata_agg['Status'] = strata_agg['Is_Anomaly'].map({True: 'Anomaly', False: 'Normal'})
+    strata_agg['Status'] = strata_agg['Is_Anomaly'].map({True: status_anomaly, False: status_normal})
     
     fig = px.bar(
         strata_agg,
@@ -374,19 +400,29 @@ def plot_stratum_distribution(customers_df, anomaly_mask):
         y='Count',
         color='Status',
         barmode='group',
-        title='Distribution of Customers by Stratum',
-        color_discrete_map={'Normal': 'blue', 'Anomaly': 'red'}
+        title=title_text,
+        color_discrete_map={status_normal: 'blue', status_anomaly: 'red'}
     )
     
     fig.update_layout(
-        xaxis_title='Socioeconomic Stratum',
-        yaxis_title='Number of Customers',
+        xaxis_title=x_label,
+        yaxis_title=y_label,
         height=400
     )
     
     return fig
 
-def plot_scatter_comparison(features, anomaly_mask):
+def plot_scatter_comparison(
+    features,
+    anomaly_mask,
+    title_text="Consumption Comparison: Current vs Previous Month",
+    x_label="Previous Month Consumption (kWh)",
+    y_label="Current Month Consumption (kWh)",
+    status_anomaly="Anomaly",
+    status_normal="Normal",
+    same_line_label="Same Consumption Line",
+    no_data_title="No data available for consumption comparison"
+):
     """
     Plot scatter comparison of current vs previous consumption with anomaly highlighting.
     
@@ -405,10 +441,7 @@ def plot_scatter_comparison(features, anomaly_mask):
     fig = go.Figure()
     
     if features.empty or len(anomaly_mask) == 0:
-        fig.update_layout(
-            title='No data available for consumption comparison',
-            height=500
-        )
+        fig.update_layout(title=no_data_title, height=500)
         return fig
     
     # Make sure the mask is the right length
@@ -422,7 +455,7 @@ def plot_scatter_comparison(features, anomaly_mask):
         'Previous Month': features['consumption_prev'],
         'Current Month': features['consumption_current'],
         'Is_Anomaly': anomaly_mask,
-        'Status': ['Anomaly' if a else 'Normal' for a in anomaly_mask]
+        'Status': [status_anomaly if a else status_normal for a in anomaly_mask]
     })
     
     fig = px.scatter(
@@ -431,7 +464,7 @@ def plot_scatter_comparison(features, anomaly_mask):
         y='Current Month',
         color='Status',
         color_discrete_map={'Normal': 'blue', 'Anomaly': 'red'},
-        title='Consumption Comparison: Current vs Previous Month',
+        title=title_text,
         hover_data=['Status']
     )
     
@@ -444,14 +477,14 @@ def plot_scatter_comparison(features, anomaly_mask):
                 y=[0, max_val],
                 mode='lines',
                 line=dict(color='grey', dash='dash'),
-                name='Same Consumption Line'
+                name=same_line_label
             )
         )
     
     fig.update_layout(
         height=500,
-        xaxis_title='Previous Month Consumption (kWh)',
-        yaxis_title='Current Month Consumption (kWh)'
+        xaxis_title=x_label,
+        yaxis_title=y_label
     )
     
     return fig
@@ -522,7 +555,15 @@ def create_kpi_cards(anomaly_scores, threshold, customers_df):
         'f1': f1
     }
 
-def plot_heatmap(data, x_field, y_field, value_field, title=None):
+def plot_heatmap(
+    data,
+    x_field,
+    y_field,
+    value_field,
+    title=None,
+    no_data_title="No data available for heatmap",
+    error_title_template="Error creating heatmap: {error}"
+):
     """
     Create a heatmap visualization.
     
@@ -547,10 +588,7 @@ def plot_heatmap(data, x_field, y_field, value_field, title=None):
     fig = go.Figure()
     
     if data.empty:
-        fig.update_layout(
-            title='No data available for heatmap',
-            height=400
-        )
+        fig.update_layout(title=no_data_title, height=400)
         return fig
     
     # Pivot data for heatmap
@@ -574,14 +612,17 @@ def plot_heatmap(data, x_field, y_field, value_field, title=None):
             fig.update_layout(title=title)
             
     except Exception as e:
-        fig.update_layout(
-            title=f'Error creating heatmap: {str(e)}',
-            height=400
-        )
+        fig.update_layout(title=error_title_template.format(error=str(e)), height=400)
     
     return fig
 
-def plot_time_series_anomalies(consumption_df, customer_ids, anomaly_dates=None):
+def plot_time_series_anomalies(
+    consumption_df,
+    customer_ids,
+    anomaly_dates=None,
+    no_data_title="No data available for time series analysis",
+    no_customer_data_title="No consumption data for selected customers"
+):
     """
     Plot time series data with highlighted anomaly periods.
     
@@ -601,10 +642,7 @@ def plot_time_series_anomalies(consumption_df, customer_ids, anomaly_dates=None)
     """
     if consumption_df.empty or not customer_ids:
         fig = go.Figure()
-        fig.update_layout(
-            title='No data available for time series analysis',
-            height=500
-        )
+        fig.update_layout(title=no_data_title, height=500)
         return fig
     
     # Filter consumption data for selected customers
@@ -612,10 +650,7 @@ def plot_time_series_anomalies(consumption_df, customer_ids, anomaly_dates=None)
     
     if filtered_df.empty:
         fig = go.Figure()
-        fig.update_layout(
-            title='No consumption data for selected customers',
-            height=500
-        )
+        fig.update_layout(title=no_customer_data_title, height=500)
         return fig
     
     # Create figure

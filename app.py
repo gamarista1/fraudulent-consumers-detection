@@ -16,13 +16,408 @@ from modules.visualization import (
     create_kpi_cards
 )
 
+# Translations
+TRANSLATIONS = {
+    "ES": {
+        "page_title": "Plataforma de Detección de Fraude | DISICO Ingeniería S.A.",
+        "main_header": "⚡ Plataforma Corporativa de Detección de Fraude Energético | DISICO Ingeniería S.A.",
+        "intro_paragraph": (
+            "Este sistema inteligente implementa el método de Distribución Gaussiana Multivariada (MGD) "
+            "para detectar consumidores fraudulentos en servicios de energía, analizando la estratificación "
+            "socioeconómica, los patrones de consumo y el impacto climático para identificar anomalías con alta precisión."
+        ),
+        "language_selector": "Idioma de la interfaz",
+        "language_es": "Español",
+        "language_en": "Inglés",
+        "loading_data": "Cargando datos...",
+        "analyzing_data": "Analizando datos...",
+        "sidebar_header": "Controles de Detección de Fraude",
+        "sidebar_data_filters": "### 📅 Filtros de datos",
+        "filter_year": "Año",
+        "filter_month": "Mes",
+        "filter_zone": "Filtro de zona",
+        "filter_zone_all": "Todas",
+        "filter_zone_help": "Filtrar datos por zona geográfica específica",
+        "sidebar_model_params": "### ⚙️ Parámetros del modelo",
+        "anomaly_threshold_label": "Factor de umbral de anomalía",
+        "anomaly_threshold_help": "Valores bajos detectan más anomalías (pueden aumentar falsos positivos). Valores altos detectan menos, pero con mayor certeza.",
+        "sidebar_feature_selection": "### 🔍 Selección de características",
+        "feature_consumption_label": "Consumo",
+        "feature_consumption_help": "Incluir patrones de consumo en el análisis",
+        "feature_stratification_label": "Estratificación",
+        "feature_stratification_help": "Incluir factores socioeconómicos",
+        "feature_weather_label": "Clima",
+        "feature_weather_help": "Incluir factores climáticos",
+        "feature_historical_label": "Histórico",
+        "feature_historical_help": "Incluir comparación interanual",
+        "error_select_feature": "Seleccione al menos una categoría de características para el análisis",
+        "warning_no_data": "No hay datos disponibles para los filtros seleccionados. Intente con otros parámetros.",
+        "warning_no_features_found": "No se encontraron características seleccionadas en los datos. Características disponibles: {available}",
+        "detection_results_header": "📊 Resultados de detección",
+        "kpi_total_customers": "Total de clientes",
+        "kpi_total_customers_trend": "Consumidores activos",
+        "kpi_detection_rate": "Tasa de detección",
+        "kpi_detection_rate_trend": "Porcentaje anómalo",
+        "kpi_detected_anomalies": "Anomalías detectadas",
+        "kpi_detected_anomalies_trend": "Fraude potencial",
+        "kpi_precision": "Tasa de acierto (Precisión)",
+        "kpi_precision_trend": "Validación",
+        "kpi_not_available": "N/D",
+        "tab_geospatial": "📍 Análisis geoespacial",
+        "tab_consumption": "📈 Análisis de consumo",
+        "tab_fraud": "🔎 Detección de fraude",
+        "geo_subheader": "Distribución geográfica de anomalías",
+        "geo_info_note": "**Nota:** Azul = consumidores normales, rojo = anomalías potencialmente fraudulentas.",
+        "geo_error": "Error al mostrar el mapa: {error}",
+        "geo_map_error_popup": "Error mostrando el mapa de datos",
+        "consumption_subheader": "Análisis de patrones de consumo",
+        "anomaly_distribution_title": "Distribución de puntajes de anomalía",
+        "scatter_title": "Consumo actual vs. consumo previo por estado de anomalía",
+        "scatter_x_label": "Consumo mes anterior (kWh)",
+        "scatter_y_label": "Consumo mes actual (kWh)",
+        "consumption_patterns_title": "Patrones de consumo por estrato socioeconómico",
+        "stratum_distribution_title": "Distribución de anomalías por estrato socioeconómico",
+        "feature_significance_header": "Análisis de relevancia de características",
+        "feature_importance_title": "Importancia relativa de variables en la detección de anomalías",
+        "feature_importance_expander": "📚 Comprender la importancia de variables",
+        "feature_importance_markdown": (
+            "### Cómo interpretar la importancia de variables\n\n"
+            "**La importancia de variables** en este modelo indica cuánto contribuye cada "
+            "variable a identificar actividad fraudulenta:\n\n"
+            "- **Valores más altos** significan que la variable es más crítica para detectar anomalías\n"
+            "- **Variables relacionadas** suelen mostrar niveles de importancia similares\n"
+            "- **Variables de consumo** suelen tener alta importancia porque reflejan patrones de uso\n"
+            "- **Factores socioeconómicos** contextualizan el consumo según el perfil esperado\n\n"
+            "El modelo utiliza estas variables para establecer un perfil multidimensional de comportamiento "
+            "normal del consumidor e identificar atípicos que se desvían de los patrones establecidos."
+        ),
+        "fraud_detected_header": "Consumidores fraudulentos detectados",
+        "anomaly_process_error": "Error procesando los datos de anomalías: {error}",
+        "anomaly_process_detail_unavailable": "La información detallada de anomalías no está disponible. Ajuste los filtros.",
+        "no_fraud_detected": "🔍 No se detectaron consumidores fraudulentos con el umbral actual. Pruebe bajar el umbral para identificar más anomalías.",
+        "no_fraud_detected_alt": "🔍 No se detectaron consumidores fraudulentos con el umbral actual. Ajuste parámetros o seleccione otros periodos.",
+        "understanding_fraud_header": "Comprender la detección de fraude",
+        "fraud_detected_markdown": (
+            "### Cómo se detecta el fraude\n\n"
+            "El modelo analiza múltiples dimensiones del comportamiento del consumidor para identificar patrones "
+            "que se desvían significativamente de la norma:\n\n"
+            "1. **Patrones de consumo** - Cambios inusuales en el uso de energía frente al histórico\n"
+            "2. **Contexto socioeconómico** - Consumo inconsistente con el estrato socioeconómico\n"
+            "3. **Correlación climática** - Consumo que no sigue patrones estacionales esperados\n"
+            "4. **Análisis espacial** - Agrupamientos geográficos de anomalías que podrían indicar fraude organizado\n\n"
+            "El puntaje de anomalía representa la distancia estadística del comportamiento del consumidor respecto "
+            "al patrón esperado; puntajes más altos implican mayor probabilidad de fraude."
+        ),
+        "risk_level_markdown": (
+            "### Clasificación por nivel de riesgo\n\n"
+            "Los niveles de riesgo se determinan según la severidad de la anomalía:\n\n"
+            "- **Crítico** (80-100): Comportamiento extremadamente anómalo con alta confianza de fraude\n"
+            "- **Alto** (60-79): Patrones significativamente inusuales que requieren investigación inmediata\n"
+            "- **Medio** (40-59): Actividad moderadamente sospechosa que requiere seguimiento\n"
+            "- **Bajo** (0-39): Ligeramente inusual, puede explicarse por factores legítimos\n\n"
+            "Los consumidores con mayor nivel de riesgo deben priorizarse para inspecciones de campo o revisiones técnicas."
+        ),
+        "fraud_types_expander": "📋 Tipos de fraude detectados por el sistema",
+        "fraud_types_electricity_title": "Fraude en distribución eléctrica",
+        "fraud_types_electricity_list": (
+            "- **Manipulación del medidor** - Alteración física para reducir lecturas\n"
+            "- **Bypass del medidor** - Conexión directa a la red sin medición\n"
+            "- **Inversión del medidor** - Invertir conexiones para revertir el conteo\n"
+            "- **Uso comercial en tarifa residencial** - Operación comercial con tarifa doméstica\n"
+            "- **Extensión ilegal de línea** - Derivaciones no autorizadas\n"
+            "- **Manipulación de TC** - Alteración de relaciones de transformadores de corriente\n"
+            "- **Perturbación del neutro** - Interferencia del neutro para afectar lecturas\n"
+        ),
+        "fraud_types_gas_title": "Fraude en distribución de gas natural",
+        "fraud_types_gas_list": (
+            "- **Manipulación del medidor** - Alteración física para reducir consumo reportado\n"
+            "- **Uso indebido de tarifa** - Uso comercial con tarifa doméstica\n"
+            "- **Conexiones ilegales** - Conexiones no autorizadas a la red\n"
+            "- **Inversión del medidor** - Invertir conexiones para alterar lecturas\n"
+            "- **Extensión ilegal de línea** - Derivaciones no autorizadas\n"
+            "- **Uso de compresores** - Uso no autorizado para extraer más gas\n"
+            "- **Generación eléctrica** - Uso de gas para generación sin tarifa adecuada\n"
+        ),
+        "app_error": "Se produjo un error en la aplicación: {error}",
+        "app_error_warning": "Intente con otros filtros o actualice la página.",
+        "technical_details_expander": "Detalles técnicos",
+        "technical_details_persist": "Si este error persiste, contacte al administrador del sistema.",
+        "about_expander": "ℹ️ Acerca del sistema",
+        "about_text": (
+            "Esta plataforma de detección de fraude implementa el método de Distribución Gaussiana Multivariada "
+            "descrito en investigaciones sobre detección de fraude en servicios públicos.\n\n"
+            "**Versión:** 2.0\n"
+            "**Última actualización:** abril de 2025\n\n"
+            "Desarrollado para compañías distribuidoras con el fin de identificar posibles robos de energía y "
+            "patrones de consumo fraudulentos mediante algoritmos avanzados de detección de anomalías."
+        ),
+        "download_report_label": "📥 Descargar reporte",
+        "download_report_help": "Descargar el listado de consumidores fraudulentos detectados",
+        "report_ready_info": "📋 Reporte listo para descargar. El CSV contiene anomalías detectadas con su nivel de riesgo y patrones de consumo para investigación.",
+        "risk_level_column": "Nivel de riesgo",
+        "risk_level_critical": "Crítico",
+        "risk_level_high": "Alto",
+        "risk_level_medium": "Medio",
+        "risk_level_low": "Bajo",
+        "risk_distribution_title": "Distribución de anomalías por nivel de riesgo",
+        "risk_xaxis_title": "Nivel de riesgo",
+        "risk_yaxis_title": "Número de clientes",
+        "csv_filename_template": "consumidores_fraudulentos_{year}_{month}.csv",
+        "column_customer_id": "ID de cliente",
+        "column_zone": "Zona",
+        "column_stratum": "Estrato",
+        "column_current_consumption": "Consumo actual (kWh)",
+        "column_previous_consumption": "Año anterior (kWh)",
+        "column_change_pct": "Variación (%)",
+        "column_anomaly_score": "Puntaje de anomalía",
+        "feature_importance_title_no_data": "Modelo no ajustado o sin variables disponibles",
+        "anomaly_distribution_no_data": "No hay datos para distribución de anomalías",
+        "scatter_no_data": "No hay datos para comparación de consumo",
+        "consumption_no_data": "No hay datos disponibles para patrones de consumo",
+        "consumption_no_data_filtered": "No hay datos de consumo para los criterios seleccionados",
+        "stratum_no_data": "No hay datos para distribución por estrato",
+        "stratum_axis_title": "Estrato socioeconómico",
+        "stratum_legend_normal": "Normal",
+        "stratum_legend_anomaly": "Anomalía",
+        "scatter_status_normal": "Normal",
+        "scatter_status_anomaly": "Anomalía",
+        "scatter_same_line": "Línea de consumo igual",
+        "plot_x_date": "Fecha",
+        "plot_y_consumption": "Consumo mensual (kWh)",
+        "plot_legend_stratum": "Estrato socioeconómico",
+        "plot_stratum_prefix": "Estrato ",
+        "plot_anomaly_score_label": "Puntaje de anomalía",
+        "plot_count_label": "Conteo",
+        "plot_threshold_label": "Umbral de anomalía",
+        "map_no_data": "No hay datos disponibles para los filtros seleccionados",
+        "map_cluster_normal": "Consumidores normales",
+        "map_cluster_anomaly": "Anomalías",
+        "map_popup_anomaly_title": "Anomalía detectada",
+        "map_popup_normal_title": "Consumidor normal",
+        "map_label_customer_id": "ID cliente",
+        "map_label_stratum": "Estrato",
+        "map_label_zone": "Zona",
+        "map_label_anomaly_score": "Puntaje de anomalía",
+        "map_label_risk_level": "Nivel de riesgo",
+        "map_tooltip_anomaly": "Anomalía",
+        "map_tooltip_normal": "Normal",
+        "map_legend_normal": "Normal",
+        "map_legend_anomaly": "Anomalía",
+        "chart_container_end": "</div>"
+    },
+    "EN": {
+        "page_title": "Fraud Detection Platform | DISICO Ingeniería S.A.",
+        "main_header": "⚡ Corporate Energy Fraud Detection Platform | DISICO Ingeniería S.A.",
+        "intro_paragraph": (
+            "This intelligent system implements the Multivariate Gaussian Distribution (MGD) method "
+            "to detect fraudulent consumers in energy utilities, analyzing socioeconomic stratification, "
+            "consumption patterns, and climate impacts to identify anomalies with high precision."
+        ),
+        "language_selector": "Interface language",
+        "language_es": "Spanish",
+        "language_en": "English",
+        "loading_data": "Loading data...",
+        "analyzing_data": "Analyzing data...",
+        "sidebar_header": "Fraud Detection Controls",
+        "sidebar_data_filters": "### 📅 Data Filters",
+        "filter_year": "Year",
+        "filter_month": "Month",
+        "filter_zone": "Zone Filter",
+        "filter_zone_all": "All",
+        "filter_zone_help": "Filter data by specific geographic zone",
+        "sidebar_model_params": "### ⚙️ Model Parameters",
+        "anomaly_threshold_label": "Anomaly Threshold Factor",
+        "anomaly_threshold_help": "Lower values detect more anomalies (may increase false positives). Higher values detect fewer, more certain anomalies.",
+        "sidebar_feature_selection": "### 🔍 Feature Selection",
+        "feature_consumption_label": "Consumption",
+        "feature_consumption_help": "Include consumption patterns in analysis",
+        "feature_stratification_label": "Stratification",
+        "feature_stratification_help": "Include socioeconomic factors",
+        "feature_weather_label": "Weather",
+        "feature_weather_help": "Include climate factors",
+        "feature_historical_label": "Historical",
+        "feature_historical_help": "Include year-over-year comparison",
+        "error_select_feature": "Please select at least one feature category for analysis",
+        "warning_no_data": "No data available for the selected filters. Please try different filter settings.",
+        "warning_no_features_found": "No selected features found in data. Available features: {available}",
+        "detection_results_header": "📊 Detection Results",
+        "kpi_total_customers": "Total Customers",
+        "kpi_total_customers_trend": "Active consumers",
+        "kpi_detection_rate": "Detection Rate",
+        "kpi_detection_rate_trend": "Anomalous %",
+        "kpi_detected_anomalies": "Detected Anomalies",
+        "kpi_detected_anomalies_trend": "Potential fraud",
+        "kpi_precision": "Hit Rate (Precision)",
+        "kpi_precision_trend": "Validation",
+        "kpi_not_available": "N/A",
+        "tab_geospatial": "📍 Geospatial Analysis",
+        "tab_consumption": "📈 Consumption Analysis",
+        "tab_fraud": "🔎 Fraud Detection",
+        "geo_subheader": "Geospatial distribution of anomalies",
+        "geo_info_note": "**Note:** Blue = normal consumers, red = potentially fraudulent anomalies.",
+        "geo_error": "Error displaying the map: {error}",
+        "geo_map_error_popup": "Error displaying the data map",
+        "consumption_subheader": "Consumption patterns analysis",
+        "anomaly_distribution_title": "Distribution of Anomaly Scores",
+        "scatter_title": "Current vs. Previous Consumption by Anomaly Status",
+        "scatter_x_label": "Previous Month Consumption (kWh)",
+        "scatter_y_label": "Current Month Consumption (kWh)",
+        "consumption_patterns_title": "Consumption Patterns by Socioeconomic Stratum",
+        "stratum_distribution_title": "Anomaly Distribution by Socioeconomic Stratum",
+        "feature_significance_header": "Feature Significance Analysis",
+        "feature_importance_title": "Relative Importance of Features in Anomaly Detection",
+        "feature_importance_expander": "📚 Understanding Feature Importance",
+        "feature_importance_markdown": (
+            "### How to Interpret Feature Importance\n\n"
+            "**Feature importance** in this model indicates how much each variable contributes to identifying fraudulent activity:\n\n"
+            "- **Higher values** mean the feature is more critical for detecting anomalies\n"
+            "- **Related features** often show similar importance values\n"
+            "- **Consumption-related features** typically have significant importance as they directly reflect usage patterns\n"
+            "- **Socioeconomic factors** help contextualize consumption relative to expected patterns for specific demographic groups\n\n"
+            "The model uses these features to establish a multidimensional profile of normal consumer behavior, then identifies outliers that deviate from these established patterns."
+        ),
+        "fraud_detected_header": "Detected Fraudulent Consumers",
+        "anomaly_process_error": "Error processing anomaly data: {error}",
+        "anomaly_process_detail_unavailable": "Detailed anomaly information is not available. Try adjusting filter settings.",
+        "no_fraud_detected": "🔍 No fraudulent consumers detected with the current threshold. Try lowering the threshold to detect more potential anomalies.",
+        "no_fraud_detected_alt": "🔍 No fraudulent consumers detected with the current threshold. Try adjusting parameters or selecting different time periods.",
+        "understanding_fraud_header": "Understanding Fraud Detection",
+        "fraud_detected_markdown": (
+            "### How Fraud is Detected\n\n"
+            "The model analyzes multiple dimensions of consumer behavior to identify patterns that deviate significantly from the norm:\n\n"
+            "1. **Consumption Patterns** - Unusual changes in electricity usage compared to historical data\n"
+            "2. **Socioeconomic Context** - Consumption that's inconsistent with the socioeconomic stratum\n"
+            "3. **Weather Correlation** - Consumption that doesn't follow expected seasonal patterns\n"
+            "4. **Spatial Analysis** - Geographic clustering of anomalies that may indicate organized fraud\n\n"
+            "The anomaly score represents the statistical distance of a consumer's behavior from the expected pattern, with higher scores indicating greater likelihood of fraudulent activity."
+        ),
+        "risk_level_markdown": (
+            "### Risk Level Classification\n\n"
+            "Risk levels are determined based on anomaly severity:\n\n"
+            "- **Critical** (80-100): Extremely abnormal behavior with high confidence of fraud\n"
+            "- **High** (60-79): Significantly unusual patterns warranting immediate investigation\n"
+            "- **Medium** (40-59): Moderately suspicious activity requiring follow-up\n"
+            "- **Low** (0-39): Slightly unusual but may be explained by legitimate factors\n\n"
+            "Consumers with higher risk levels should be prioritized for field inspections or technical reviews."
+        ),
+        "fraud_types_expander": "📋 Types of Fraud Detected by the System",
+        "fraud_types_electricity_title": "Electricity Distribution Fraud",
+        "fraud_types_electricity_list": (
+            "- **Meter Tampering** - Physical manipulation of meters to reduce readings\n"
+            "- **Meter Bypassing** - Direct connection to power lines bypassing the meter\n"
+            "- **Meter Reversal** - Inverting meter connections to reverse counting\n"
+            "- **Commercial Use on Domestic Tariff** - Business operations under residential rates\n"
+            "- **Illegal Line Extension** - Unauthorized extension to unmetered premises\n"
+            "- **Current Transformer (CT) Tampering** - Manipulation of CT ratios\n"
+            "- **Neutral Disturbance** - Disrupting neutral wire to affect meter readings\n"
+        ),
+        "fraud_types_gas_title": "Natural Gas Distribution Fraud",
+        "fraud_types_gas_list": (
+            "- **Meter Tampering** - Physically altering gas meters to show lower consumption\n"
+            "- **Tariff Misuse** - Using domestic rates for commercial operations\n"
+            "- **Illegal Connections** - Unauthorized connections to gas pipelines\n"
+            "- **Meter Reversal** - Inverting meter connections to affect readings\n"
+            "- **Illegal Line Extension** - Unauthorized extension to unmetered premises\n"
+            "- **Compressor Usage** - Unauthorized use of compressors to draw more gas\n"
+            "- **Electricity Generation** - Using natural gas for power generation without proper tariffs\n"
+        ),
+        "app_error": "An error occurred in the application: {error}",
+        "app_error_warning": "Please try different filter settings or refresh the page.",
+        "technical_details_expander": "Technical Details",
+        "technical_details_persist": "If this error persists, please contact the system administrator.",
+        "about_expander": "ℹ️ About This System",
+        "about_text": (
+            "This fraud detection platform implements the Multivariate Gaussian Distribution method described in "
+            "research on fraudulent consumer detection in utilities.\n\n"
+            "**Version:** 2.0\n"
+            "**Last Updated:** April 2025\n\n"
+            "Developed for distribution companies to identify potential energy theft and fraudulent consumption patterns "
+            "using advanced anomaly detection algorithms."
+        ),
+        "download_report_label": "📥 Download Report",
+        "download_report_help": "Download the list of detected fraudulent consumers",
+        "report_ready_info": "📋 Report ready for download. The CSV file contains detected anomalies with their risk levels and consumption patterns for further investigation.",
+        "risk_level_column": "Risk Level",
+        "risk_level_critical": "Critical",
+        "risk_level_high": "High",
+        "risk_level_medium": "Medium",
+        "risk_level_low": "Low",
+        "risk_distribution_title": "Distribution of Anomalies by Risk Level",
+        "risk_xaxis_title": "Risk Level",
+        "risk_yaxis_title": "Number of Customers",
+        "csv_filename_template": "fraudulent_consumers_{year}_{month}.csv",
+        "column_customer_id": "Customer ID",
+        "column_zone": "Zone",
+        "column_stratum": "Stratum",
+        "column_current_consumption": "Current Consumption (kWh)",
+        "column_previous_consumption": "Previous Year (kWh)",
+        "column_change_pct": "Change (%)",
+        "column_anomaly_score": "Anomaly Score",
+        "feature_importance_title_no_data": "Model not fitted or no features available",
+        "anomaly_distribution_no_data": "No data available for anomaly score distribution",
+        "scatter_no_data": "No data available for consumption comparison",
+        "consumption_no_data": "No data available for consumption patterns",
+        "consumption_no_data_filtered": "No consumption data available for selected criteria",
+        "stratum_no_data": "No data available for stratum distribution",
+        "stratum_axis_title": "Socioeconomic Stratum",
+        "stratum_legend_normal": "Normal",
+        "stratum_legend_anomaly": "Anomaly",
+        "scatter_status_normal": "Normal",
+        "scatter_status_anomaly": "Anomaly",
+        "scatter_same_line": "Same Consumption Line",
+        "plot_x_date": "Date",
+        "plot_y_consumption": "Monthly Consumption (kWh)",
+        "plot_legend_stratum": "Socioeconomic Stratum",
+        "plot_stratum_prefix": "Stratum ",
+        "plot_anomaly_score_label": "Anomaly Score",
+        "plot_count_label": "Count",
+        "plot_threshold_label": "Anomaly Threshold",
+        "map_no_data": "No data available for the selected filters",
+        "map_cluster_normal": "Normal Consumers",
+        "map_cluster_anomaly": "Anomalies",
+        "map_popup_anomaly_title": "Anomaly Detected",
+        "map_popup_normal_title": "Normal Consumer",
+        "map_label_customer_id": "Customer ID",
+        "map_label_stratum": "Stratum",
+        "map_label_zone": "Zone",
+        "map_label_anomaly_score": "Anomaly Score",
+        "map_label_risk_level": "Risk Level",
+        "map_tooltip_anomaly": "Anomaly",
+        "map_tooltip_normal": "Normal",
+        "map_legend_normal": "Normal",
+        "map_legend_anomaly": "Anomaly",
+        "chart_container_end": "</div>"
+    }
+}
+
+if "language" not in st.session_state:
+    st.session_state["language"] = "ES"
+
+def get_text(key):
+    language = st.session_state.get("language", "ES")
+    return TRANSLATIONS.get(language, TRANSLATIONS["ES"]).get(key, key)
+
 # Set page configuration
 st.set_page_config(
-    page_title="Fraudulent Consumer Detection",
+    page_title=get_text("page_title"),
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Language selector (sidebar)
+current_language = st.session_state.get("language", "ES")
+language_labels = {
+    "ES": {"ES": TRANSLATIONS["ES"]["language_es"], "EN": TRANSLATIONS["ES"]["language_en"]},
+    "EN": {"ES": TRANSLATIONS["EN"]["language_es"], "EN": TRANSLATIONS["EN"]["language_en"]}
+}
+selected_language = st.sidebar.selectbox(
+    get_text("language_selector"),
+    ["ES", "EN"],
+    index=0 if current_language == "ES" else 1,
+    format_func=lambda code: language_labels[current_language][code]
+)
+st.session_state["language"] = selected_language
 
 # Custom CSS with improved styling
 st.markdown("""
@@ -248,17 +643,14 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Title and introduction
-st.markdown("<div class='main-header'>⚡ Fraudulent Consumer Detection in Power Utilities</div>", unsafe_allow_html=True)
-st.markdown("""
-This intelligent system implements the Multivariate Gaussian Distribution method for detecting fraudulent consumers in power utilities, 
-analyzing socioeconomic stratification, consumption patterns, and weather impacts to identify anomalies with high precision.
-""")
+st.markdown(f"<div class='main-header'>{get_text('main_header')}</div>", unsafe_allow_html=True)
+st.markdown(get_text("intro_paragraph"))
 
 # Main function
 def main():
     # Load data
     if 'customers_df' not in st.session_state:
-        with st.spinner("Loading data..."):
+        with st.spinner(get_text("loading_data")):
             st.session_state.customers_df, st.session_state.consumption_df, st.session_state.weather_df = load_sample_data()
     
     customers_df = st.session_state.customers_df
@@ -266,49 +658,68 @@ def main():
     weather_df = st.session_state.weather_df
     
     # Sidebar filters and styling
-    st.sidebar.markdown("<div class='sidebar-header'>Fraud Detection Controls</div>", unsafe_allow_html=True)
+    st.sidebar.markdown(f"<div class='sidebar-header'>{get_text('sidebar_header')}</div>", unsafe_allow_html=True)
     
-    st.sidebar.markdown("### 📅 Data Filters")
+    st.sidebar.markdown(get_text("sidebar_data_filters"))
     
     # Filter by date with improved UI
     col1, col2 = st.sidebar.columns(2)
     
     available_years = sorted(consumption_df['year'].unique())
-    selected_year = col1.selectbox("Year", available_years, index=len(available_years)-1)
+    selected_year = col1.selectbox(get_text("filter_year"), available_years, index=len(available_years)-1)
     
     available_months = sorted(consumption_df[consumption_df['year'] == selected_year]['month'].unique())
-    selected_month = col2.selectbox("Month", available_months, index=len(available_months)-1)
+    selected_month = col2.selectbox(get_text("filter_month"), available_months, index=len(available_months)-1)
     
     # Filter by zone with search
-    available_zones = ['All'] + sorted(customers_df['zone_code'].unique().tolist())
-    selected_zone_option = st.sidebar.selectbox("Zone Filter", available_zones, 
-                                              help="Filter data by specific geographic zone")
-    selected_zone = None if selected_zone_option == 'All' else selected_zone_option
+    available_zones = [get_text("filter_zone_all")] + sorted(customers_df['zone_code'].unique().tolist())
+    selected_zone_option = st.sidebar.selectbox(
+        get_text("filter_zone"),
+        available_zones,
+        help=get_text("filter_zone_help")
+    )
+    selected_zone = None if selected_zone_option == get_text("filter_zone_all") else selected_zone_option
     
     # MGD parameters with improved sliders
-    st.sidebar.markdown("### ⚙️ Model Parameters")
+    st.sidebar.markdown(get_text("sidebar_model_params"))
     anomaly_threshold_factor = st.sidebar.slider(
-        "Anomaly Threshold Factor", 
+        get_text("anomaly_threshold_label"),
         min_value=1.5, 
         max_value=5.0, 
         value=3.0, 
         step=0.1,
-        help="Lower values detect more anomalies (may increase false positives). Higher values detect fewer, more certain anomalies."
+        help=get_text("anomaly_threshold_help")
     )
     
     # Feature selection with better organization
-    st.sidebar.markdown("### 🔍 Feature Selection")
+    st.sidebar.markdown(get_text("sidebar_feature_selection"))
     
     feature_col1, feature_col2 = st.sidebar.columns(2)
     
-    use_consumption = feature_col1.checkbox("Consumption", value=True, help="Include consumption patterns in analysis")
-    use_stratum = feature_col1.checkbox("Stratification", value=True, help="Include socioeconomic factors")
-    use_weather = feature_col2.checkbox("Weather", value=True, help="Include climate factors")
-    use_historical = feature_col2.checkbox("Historical", value=True, help="Include year-over-year comparison")
+    use_consumption = feature_col1.checkbox(
+        get_text("feature_consumption_label"),
+        value=True,
+        help=get_text("feature_consumption_help")
+    )
+    use_stratum = feature_col1.checkbox(
+        get_text("feature_stratification_label"),
+        value=True,
+        help=get_text("feature_stratification_help")
+    )
+    use_weather = feature_col2.checkbox(
+        get_text("feature_weather_label"),
+        value=True,
+        help=get_text("feature_weather_help")
+    )
+    use_historical = feature_col2.checkbox(
+        get_text("feature_historical_label"),
+        value=True,
+        help=get_text("feature_historical_help")
+    )
     
     # Prepare features
     try:
-        with st.spinner("Analyzing data..."):
+        with st.spinner(get_text("analyzing_data")):
             features, customer_ids, filtered_customers = prepare_features(
                 customers_df, 
                 consumption_df, 
@@ -333,12 +744,12 @@ def main():
             
             # Check if any features selected
             if not selected_features:
-                st.error("Please select at least one feature category for analysis")
+                st.error(get_text("error_select_feature"))
                 return
             
             # Check if we have any data
             if features.empty:
-                st.warning("No data available for the selected filters. Please try different filter settings.")
+                st.warning(get_text("warning_no_data"))
                 
                 # Display empty visualizations
                 threshold = 0
@@ -358,7 +769,11 @@ def main():
                 # Filter features
                 common_features = list(set(selected_features).intersection(set(features.columns)))
                 if not common_features:
-                    st.warning(f"No selected features found in data. Available features: {', '.join(features.columns)}")
+                    st.warning(
+                        get_text("warning_no_features_found").format(
+                            available=", ".join(features.columns)
+                        )
+                    )
                     return
                     
                 features_subset = features[common_features]
@@ -378,7 +793,7 @@ def main():
                 kpi_metrics = create_kpi_cards(anomaly_scores, threshold, filtered_customers)
         
         # Display KPI cards with improved design - now 2x2 layout
-        st.markdown("<div class='sub-header'>📊 Detection Results</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='sub-header'>{get_text('detection_results_header')}</div>", unsafe_allow_html=True)
         
         # Create a container for the cards
         col1, col2 = st.columns(2)
@@ -387,10 +802,10 @@ def main():
             # Card 1: Total Customers
             st.markdown(f"""
             <div class='kpi-card customers'>
-                <div class='metric-label'>Total Customers</div>
+                <div class='metric-label'>{get_text('kpi_total_customers')}</div>
                 <div class='metric-value'>{kpi_metrics['total_customers']:,}</div>
                 <div class='metric-trend'>
-                    <span>Active consumers</span>
+                    <span>{get_text('kpi_total_customers_trend')}</span>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -398,10 +813,10 @@ def main():
             # Card 3: Detection Rate
             st.markdown(f"""
             <div class='kpi-card rate'>
-                <div class='metric-label'>Detection Rate</div>
+                <div class='metric-label'>{get_text('kpi_detection_rate')}</div>
                 <div class='metric-value'>{kpi_metrics['detection_rate']:.1f}%</div>
                 <div class='metric-trend'>
-                    <span>Anomalous %</span>
+                    <span>{get_text('kpi_detection_rate_trend')}</span>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -410,22 +825,24 @@ def main():
             # Card 2: Detected Anomalies
             st.markdown(f"""
             <div class='kpi-card anomalies'>
-                <div class='metric-label'>Detected Anomalies</div>
+                <div class='metric-label'>{get_text('kpi_detected_anomalies')}</div>
                 <div class='metric-value'>{kpi_metrics['anomalies_detected']:,}</div>
                 <div class='metric-trend {"trend-up" if kpi_metrics["anomalies_detected"] > 0 else ""}'>
-                    <span>Potential fraud</span>
+                    <span>{get_text('kpi_detected_anomalies_trend')}</span>
                 </div>
             </div>
             """, unsafe_allow_html=True)
             
             # Card 4: Hit Rate (Precision)
-            precision_value = f"{kpi_metrics['precision']:.1f}%" if kpi_metrics['precision'] is not None else "N/A"
+            precision_value = (
+                f"{kpi_metrics['precision']:.1f}%" if kpi_metrics['precision'] is not None else get_text("kpi_not_available")
+            )
             st.markdown(f"""
             <div class='kpi-card precision'>
-                <div class='metric-label'>Hit Rate (Precision)</div>
+                <div class='metric-label'>{get_text('kpi_precision')}</div>
                 <div class='metric-value'>{precision_value}</div>
                 <div class='metric-trend'>
-                    <span>Validation</span>
+                    <span>{get_text('kpi_precision_trend')}</span>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -434,10 +851,10 @@ def main():
         st.markdown("</div>", unsafe_allow_html=True)
         
         # Create tabs for better organization
-        tab1, tab2, tab3 = st.tabs(["📍 Geospatial Analysis", "📈 Consumption Analysis", "🔎 Fraud Detection"])
+        tab1, tab2, tab3 = st.tabs([get_text("tab_geospatial"), get_text("tab_consumption"), get_text("tab_fraud")])
 
         with tab1:
-            st.markdown("<div class='sub-header'>Distribución Geográfica de Anomalías</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='sub-header'>{get_text('geo_subheader')}</div>", unsafe_allow_html=True)
             
             try:
                 # Aseguramos que los tamaños coincidan
@@ -450,26 +867,52 @@ def main():
                     map_scores = anomaly_scores
                 
                 # Creamos y mostramos el mapa
-                anomaly_map = create_anomaly_map(map_customers, map_scores, threshold)
+                anomaly_map = create_anomaly_map(
+                    map_customers,
+                    map_scores,
+                    threshold,
+                    text={
+                        "no_data": get_text("map_no_data"),
+                        "cluster_normal": get_text("map_cluster_normal"),
+                        "cluster_anomaly": get_text("map_cluster_anomaly"),
+                        "popup_anomaly_title": get_text("map_popup_anomaly_title"),
+                        "popup_normal_title": get_text("map_popup_normal_title"),
+                        "label_customer_id": get_text("map_label_customer_id"),
+                        "label_stratum": get_text("map_label_stratum"),
+                        "label_zone": get_text("map_label_zone"),
+                        "label_anomaly_score": get_text("map_label_anomaly_score"),
+                        "label_risk_level": get_text("map_label_risk_level"),
+                        "tooltip_anomaly": get_text("map_tooltip_anomaly"),
+                        "tooltip_normal": get_text("map_tooltip_normal"),
+                        "legend_normal": get_text("map_legend_normal"),
+                        "legend_anomaly": get_text("map_legend_anomaly"),
+                        "risk_levels": {
+                            "critical": get_text("risk_level_critical"),
+                            "high": get_text("risk_level_high"),
+                            "medium": get_text("risk_level_medium"),
+                            "low": get_text("risk_level_low")
+                        }
+                    }
+                )
                 folium_static(anomaly_map, width=1200, height=600)
                 
                 # Información útil
-                st.info("**Nota:** Azul = consumidores normales, Rojo = anomalías potencialmente fraudulentas.")
+                st.info(get_text("geo_info_note"))
                 
             except Exception as e:
-                st.error(f"Error al mostrar el mapa: {str(e)}")
+                st.error(get_text("geo_error").format(error=str(e)))
                 # Crear un mapa básico como fallback
                 basic_map = folium.Map(location=[6.25, -75.58], zoom_start=12)
                 folium.Marker(
                     location=[6.25, -75.58],
-                    popup="Error mostrando el mapa de datos",
+                    popup=get_text("geo_map_error_popup"),
                     icon=folium.Icon(color="red")
                 ).add_to(basic_map)
                 folium_static(basic_map, width=1200, height=600)
             
         with tab2:
             # Consumption Analysis Tab
-            st.markdown("<div class='sub-header'>Consumption Patterns Analysis</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='sub-header'>{get_text('consumption_subheader')}</div>", unsafe_allow_html=True)
             
             # Improved layout with 2x2 grid
             col1, col2 = st.columns(2)
@@ -477,7 +920,15 @@ def main():
             with col1:
                 st.markdown("<div class='chart-container'>", unsafe_allow_html=True)
                 # Enhanced anomaly distribution
-                anomaly_dist_fig = plot_anomaly_distribution(anomaly_scores, threshold)
+                anomaly_dist_fig = plot_anomaly_distribution(
+                    anomaly_scores,
+                    threshold,
+                    title_text=get_text("anomaly_distribution_title"),
+                    x_label=get_text("plot_anomaly_score_label"),
+                    y_label=get_text("plot_count_label"),
+                    threshold_label=get_text("plot_threshold_label"),
+                    no_data_title=get_text("anomaly_distribution_no_data")
+                )
                 
                 # Add shaded area for threshold if we have data
                 if len(anomaly_scores) > 0:
@@ -492,7 +943,7 @@ def main():
                     )
                 
                 anomaly_dist_fig.update_layout(
-                    title="Distribution of Anomaly Scores",
+                    title=get_text("anomaly_distribution_title"),
                     height=400,
                     margin=dict(t=50, b=50, l=50, r=25)
                 )
@@ -502,9 +953,19 @@ def main():
             with col2:
                 st.markdown("<div class='chart-container'>", unsafe_allow_html=True)
                 # Enhanced scatter comparison
-                scatter_fig = plot_scatter_comparison(features, anomaly_mask)
+                scatter_fig = plot_scatter_comparison(
+                    features,
+                    anomaly_mask,
+                    title_text=get_text("scatter_title"),
+                    x_label=get_text("scatter_x_label"),
+                    y_label=get_text("scatter_y_label"),
+                    status_anomaly=get_text("scatter_status_anomaly"),
+                    status_normal=get_text("scatter_status_normal"),
+                    same_line_label=get_text("scatter_same_line"),
+                    no_data_title=get_text("scatter_no_data")
+                )
                 scatter_fig.update_layout(
-                    title="Current vs. Previous Consumption by Anomaly Status",
+                    title=get_text("scatter_title"),
                     height=400,
                     margin=dict(t=50, b=50, l=50, r=25)
                 )
@@ -516,9 +977,19 @@ def main():
             with col1:
                 st.markdown("<div class='chart-container'>", unsafe_allow_html=True)
                 # Enhanced consumption patterns
-                patterns_fig = plot_consumption_patterns(consumption_df, customers_df)
+                patterns_fig = plot_consumption_patterns(
+                    consumption_df,
+                    customers_df,
+                    title_text=get_text("consumption_patterns_title"),
+                    x_label=get_text("plot_x_date"),
+                    y_label=get_text("plot_y_consumption"),
+                    legend_title=get_text("plot_legend_stratum"),
+                    stratum_prefix=get_text("plot_stratum_prefix"),
+                    no_data_title=get_text("consumption_no_data"),
+                    no_data_filtered_title=get_text("consumption_no_data_filtered")
+                )
                 patterns_fig.update_layout(
-                    title="Consumption Patterns by Social Stratum",
+                    title=get_text("consumption_patterns_title"),
                     height=400,
                     margin=dict(t=50, b=50, l=50, r=25)
                 )
@@ -528,9 +999,18 @@ def main():
             with col2:
                 st.markdown("<div class='chart-container'>", unsafe_allow_html=True)
                 # Enhanced stratum distribution
-                stratum_fig = plot_stratum_distribution(filtered_customers, anomaly_mask)
+                stratum_fig = plot_stratum_distribution(
+                    filtered_customers,
+                    anomaly_mask,
+                    title_text=get_text("stratum_distribution_title"),
+                    x_label=get_text("stratum_axis_title"),
+                    y_label=get_text("risk_yaxis_title"),
+                    status_anomaly=get_text("stratum_legend_anomaly"),
+                    status_normal=get_text("stratum_legend_normal"),
+                    no_data_title=get_text("stratum_no_data")
+                )
                 stratum_fig.update_layout(
-                    title="Anomaly Distribution by Social Stratum",
+                    title=get_text("stratum_distribution_title"),
                     height=400,
                     margin=dict(t=50, b=50, l=50, r=25)
                 )
@@ -539,13 +1019,18 @@ def main():
             
             # Feature importance (only if we have data and model is fitted)
             if not features.empty and 'mgd_model' in locals() and mgd_model.fitted:
-                st.markdown("<div class='sub-header'>Feature Significance Analysis</div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='sub-header'>{get_text('feature_significance_header')}</div>", unsafe_allow_html=True)
                 st.markdown("<div class='chart-container'>", unsafe_allow_html=True)
                 
                 # Enhanced feature importance visualization
-                feature_fig = plot_feature_importance(mgd_model, common_features)
+                feature_fig = plot_feature_importance(
+                    mgd_model,
+                    common_features,
+                    title_text=get_text("feature_importance_title"),
+                    no_data_title=get_text("feature_importance_title_no_data")
+                )
                 feature_fig.update_layout(
-                    title="Relative Importance of Features in Anomaly Detection",
+                    title=get_text("feature_importance_title"),
                     height=500,
                     margin=dict(t=50, b=70, l=70, r=25)
                 )
@@ -554,23 +1039,12 @@ def main():
                 st.markdown("</div>", unsafe_allow_html=True)
                 
                 # Add feature explanation
-                with st.expander("📚 Understanding Feature Importance"):
-                    st.markdown("""
-                    ### How to Interpret Feature Importance
-                    
-                    **Feature importance** in this model indicates how much each variable contributes to identifying fraudulent activity:
-                    
-                    - **Higher values** mean the feature is more critical for detecting anomalies
-                    - **Related features** often show similar importance values
-                    - **Consumption-related features** typically have significant importance as they directly reflect usage patterns
-                    - **Socioeconomic factors** help contextualize consumption relative to expected patterns for specific demographic groups
-                    
-                    The model uses these features to establish a multidimensional profile of normal consumer behavior, then identifies outliers that deviate from these established patterns.
-                    """)
+                with st.expander(get_text("feature_importance_expander")):
+                    st.markdown(get_text("feature_importance_markdown"))
             
         with tab3:
             # Fraud Detection Tab
-            st.markdown("<div class='sub-header'>Detected Fraudulent Consumers</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='sub-header'>{get_text('fraud_detected_header')}</div>", unsafe_allow_html=True)
             
             # Display anomalous customers (only if we have anomalies)
             if kpi_metrics['anomalies_detected'] > 0:
@@ -637,13 +1111,13 @@ def main():
                             # Calculate a risk level based on normalized score
                             def get_risk_level(score):
                                 if score >= 80:
-                                    return "Critical"
+                                    return get_text("risk_level_critical")
                                 elif score >= 60:
-                                    return "High"
+                                    return get_text("risk_level_high")
                                 elif score >= 40:
-                                    return "Medium"
+                                    return get_text("risk_level_medium")
                                 else:
-                                    return "Low"
+                                    return get_text("risk_level_low")
                             
                             anomaly_customers['risk_level'] = anomaly_customers['normalized_score'].apply(get_risk_level)
                         
@@ -657,14 +1131,14 @@ def main():
                         st.dataframe(
                             anomaly_customers[display_cols].sort_values('anomaly_score', ascending=False),
                             column_config={
-                                'customer_id': st.column_config.TextColumn('Customer ID'),
-                                'zone_code': st.column_config.TextColumn('Zone'),
-                                'stratum': st.column_config.NumberColumn('Stratum', format="%d"),
-                                'consumption_current': st.column_config.NumberColumn('Current Consumption (kWh)', format="%.1f"),
-                                'consumption_prev': st.column_config.NumberColumn('Previous Year (kWh)', format="%.1f"),
-                                'percent_change': st.column_config.NumberColumn('Change (%)', format="%.1f%%"),
-                                'anomaly_score': st.column_config.NumberColumn('Anomaly Score', format="%.2f"),
-                                'risk_level': st.column_config.TextColumn('Risk Level')
+                                'customer_id': st.column_config.TextColumn(get_text("column_customer_id")),
+                                'zone_code': st.column_config.TextColumn(get_text("column_zone")),
+                                'stratum': st.column_config.NumberColumn(get_text("column_stratum"), format="%d"),
+                                'consumption_current': st.column_config.NumberColumn(get_text("column_current_consumption"), format="%.1f"),
+                                'consumption_prev': st.column_config.NumberColumn(get_text("column_previous_consumption"), format="%.1f"),
+                                'percent_change': st.column_config.NumberColumn(get_text("column_change_pct"), format="%.1f%%"),
+                                'anomaly_score': st.column_config.NumberColumn(get_text("column_anomaly_score"), format="%.2f"),
+                                'risk_level': st.column_config.TextColumn(get_text("risk_level_column"))
                             },
                             hide_index=True,
                             use_container_width=True
@@ -674,41 +1148,46 @@ def main():
                         
                         # Chart showing anomaly customers by risk level
                         risk_counts = anomaly_customers['risk_level'].value_counts().reset_index()
-                        risk_counts.columns = ['Risk Level', 'Count']
+                        risk_counts.columns = [get_text("risk_level_column"), get_text("plot_count_label")]
                         
                         if not risk_counts.empty:
                             # Define color map for risk levels
                             risk_colors = {
-                                'Critical': '#d32f2f',
-                                'High': '#f57c00',
-                                'Medium': '#ffd166',
-                                'Low': '#06d6a0'
+                                get_text("risk_level_critical"): '#d32f2f',
+                                get_text("risk_level_high"): '#f57c00',
+                                get_text("risk_level_medium"): '#ffd166',
+                                get_text("risk_level_low"): '#06d6a0'
                             }
                             
                             # Create risk level distribution chart
                             st.markdown("<div class='chart-container'>", unsafe_allow_html=True)
                             
                             # Sort by risk severity
-                            risk_order = ['Critical', 'High', 'Medium', 'Low']
-                            risk_counts['Risk Level'] = pd.Categorical(
-                                risk_counts['Risk Level'], 
+                            risk_order = [
+                                get_text("risk_level_critical"),
+                                get_text("risk_level_high"),
+                                get_text("risk_level_medium"),
+                                get_text("risk_level_low")
+                            ]
+                            risk_counts[get_text("risk_level_column")] = pd.Categorical(
+                                risk_counts[get_text("risk_level_column")],
                                 categories=risk_order, 
                                 ordered=True
                             )
-                            risk_counts = risk_counts.sort_values('Risk Level')
+                            risk_counts = risk_counts.sort_values(get_text("risk_level_column"))
                             
                             risk_fig = px.bar(
                                 risk_counts, 
-                                x='Risk Level', 
-                                y='Count',
-                                color='Risk Level',
+                                x=get_text("risk_level_column"),
+                                y=get_text("plot_count_label"),
+                                color=get_text("risk_level_column"),
                                 color_discrete_map=risk_colors,
-                                title="Distribution of Anomalies by Risk Level"
+                                title=get_text("risk_distribution_title")
                             )
                             
                             risk_fig.update_layout(
-                                xaxis_title="Risk Level",
-                                yaxis_title="Number of Customers",
+                                xaxis_title=get_text("risk_xaxis_title"),
+                                yaxis_title=get_text("risk_yaxis_title"),
                                 height=400
                             )
                             
@@ -721,110 +1200,68 @@ def main():
                         
                         with col2:
                             st.download_button(
-                                label="📥 Download Report",
+                                label=get_text("download_report_label"),
                                 data=csv_data,
-                                file_name=f"fraudulent_consumers_{selected_year}_{selected_month}.csv",
+                                file_name=get_text("csv_filename_template").format(
+                                    year=selected_year,
+                                    month=selected_month
+                                ),
                                 mime="text/csv",
-                                help="Download the list of detected fraudulent consumers"
+                                help=get_text("download_report_help")
                             )
                         
                         with col1:
-                            st.info("📋 Report ready for download. The CSV file contains all detected anomalies with their risk levels and consumption patterns for further investigation.")
+                            st.info(get_text("report_ready_info"))
                         
                     except Exception as e:
-                        st.error(f"Error processing anomaly data: {str(e)}")
-                        st.write("Detailed anomaly information is not available. Try adjusting filter settings.")
+                        st.error(get_text("anomaly_process_error").format(error=str(e)))
+                        st.write(get_text("anomaly_process_detail_unavailable"))
                 else:
-                    st.info("🔍 No fraudulent consumers detected with the current threshold. Try lowering the threshold to detect more potential anomalies.")
+                    st.info(get_text("no_fraud_detected"))
             else:
-                st.info("🔍 No fraudulent consumers detected with the current threshold. Try adjusting parameters or selecting different time periods.")
+                st.info(get_text("no_fraud_detected_alt"))
             
             # Add fraud detection explanation
-            st.markdown("<div class='sub-header'>Understanding Fraud Detection</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='sub-header'>{get_text('understanding_fraud_header')}</div>", unsafe_allow_html=True)
             
             col1, col2 = st.columns(2)
             
             with col1:
                 st.markdown("<div class='chart-container'>", unsafe_allow_html=True)
-                st.markdown("""
-                ### How Fraud is Detected
-                
-                The model analyzes multiple dimensions of consumer behavior to identify patterns that deviate significantly from the norm:
-                
-                1. **Consumption Patterns** - Unusual changes in electricity usage compared to historical data
-                2. **Socioeconomic Context** - Consumption that's inconsistent with the socioeconomic stratum
-                3. **Weather Correlation** - Consumption that doesn't follow expected seasonal patterns
-                4. **Spatial Analysis** - Geographic clustering of anomalies that may indicate organized fraud
-                
-                The anomaly score represents the statistical distance of a consumer's behavior from the expected pattern, with higher scores indicating greater likelihood of fraudulent activity.
-                """)
+                st.markdown(get_text("fraud_detected_markdown"))
                 st.markdown("</div>", unsafe_allow_html=True)
             
             with col2:
                 st.markdown("<div class='chart-container'>", unsafe_allow_html=True)
-                st.markdown("""
-                ### Risk Level Classification
-                
-                Risk levels are determined based on anomaly severity:
-                
-                - **Critical** (80-100): Extremely abnormal behavior with high confidence of fraud
-                - **High** (60-79): Significantly unusual patterns warranting immediate investigation
-                - **Medium** (40-59): Moderately suspicious activity requiring follow-up
-                - **Low** (0-39): Slightly unusual but may be explained by legitimate factors
-                
-                Consumers with higher risk levels should be prioritized for field inspections or technical reviews.
-                """)
+                st.markdown(get_text("risk_level_markdown"))
                 st.markdown("</div>", unsafe_allow_html=True)
             
             # Add fraud types explanation in an expander
-            with st.expander("📋 Types of Fraud Detected by the System"):
+            with st.expander(get_text("fraud_types_expander")):
                 col1, col2 = st.columns(2)
                 
                 with col1:
-                    st.markdown("""
-                    ### Electricity Distribution Fraud
-                    
-                    - **Meter Tampering** - Physical manipulation of meters to reduce readings
-                    - **Meter Bypassing** - Direct connection to power lines bypassing the meter
-                    - **Meter Reversal** - Inverting meter connections to reverse counting
-                    - **Commercial Use on Domestic Tariff** - Business operations under residential rates
-                    - **Illegal Line Extension** - Unauthorized extension to unmetered premises
-                    - **Current Transformer (CT) Tampering** - Manipulation of CT ratios
-                    - **Neutral Disturbance** - Disrupting neutral wire to affect meter readings
-                    """)
+                    st.markdown(
+                        f"### {get_text('fraud_types_electricity_title')}\n\n{get_text('fraud_types_electricity_list')}"
+                    )
                 
                 with col2:
-                    st.markdown("""
-                    ### Natural Gas Distribution Fraud
-                    
-                    - **Meter Tampering** - Physically altering gas meters to show lower consumption
-                    - **Tariff Misuse** - Using domestic rates for commercial operations
-                    - **Illegal Connections** - Unauthorized connections to gas pipelines
-                    - **Meter Reversal** - Inverting meter connections to affect readings
-                    - **Illegal Line Extension** - Unauthorized extension to unmetered premises
-                    - **Compressor Usage** - Unauthorized use of compressors to draw more gas
-                    - **Electricity Generation** - Using natural gas for power generation without proper tariffs
-                    """)
+                    st.markdown(
+                        f"### {get_text('fraud_types_gas_title')}\n\n{get_text('fraud_types_gas_list')}"
+                    )
     
     except Exception as e:
-        st.error(f"An error occurred in the application: {str(e)}")
-        st.warning("Please try different filter settings or refresh the page.")
+        st.error(get_text("app_error").format(error=str(e)))
+        st.warning(get_text("app_error_warning"))
         
         # Provide debugging information in an expander
-        with st.expander("Technical Details"):
+        with st.expander(get_text("technical_details_expander")):
             st.code(str(e))
-            st.write("If this error persists, please contact the system administrator.")
+            st.write(get_text("technical_details_persist"))
 
 # Add an about section in the sidebar
-with st.sidebar.expander("ℹ️ About This System"):
-    st.write("""
-    This fraud detection system implements the Multivariate Gaussian Distribution method described in research on fraudulent consumer detection in power utilities of developing countries.
-    
-    **Version:** 2.0
-    **Last Updated:** April 2025
-    
-    Developed for power distribution companies to identify potential energy theft and fraudulent consumption patterns using advanced anomaly detection algorithms.
-    """)
+with st.sidebar.expander(get_text("about_expander")):
+    st.write(get_text("about_text"))
 
 # Run the app
 if __name__ == "__main__":
