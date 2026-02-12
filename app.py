@@ -395,7 +395,19 @@ if "language" not in st.session_state:
 
 def get_text(key):
     language = st.session_state.get("language", "ES")
-    return TRANSLATIONS.get(language, TRANSLATIONS["ES"]).get(key, key)
+    translations = TRANSLATIONS.get(language, TRANSLATIONS["ES"])
+    if key in translations:
+        return translations[key]
+    if "missing_translation_keys" not in st.session_state:
+        st.session_state["missing_translation_keys"] = set()
+    if key not in st.session_state["missing_translation_keys"]:
+        st.session_state["missing_translation_keys"].add(key)
+        warning_message = f"Missing translation key: {key} (language: {language})"
+        try:
+            st.warning(warning_message)
+        except Exception:
+            print(warning_message)
+    return TRANSLATIONS.get("EN", {}).get(key, key)
 
 # Set page configuration
 st.set_page_config(
