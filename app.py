@@ -2,9 +2,11 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import folium
+import textwrap
 from streamlit_folium import folium_static
 import plotly.express as px
 import plotly.graph_objects as go
+import plotly.io as pio
 from folium.plugins import MarkerCluster, HeatMap, Fullscreen, MiniMap
 
 # Import modules
@@ -20,7 +22,9 @@ from modules.visualization import (
 TRANSLATIONS = {
     "ES": {
         "page_title": "Plataforma de Detección de Fraude | DISICO Ingeniería S.A.",
-        "main_header": "⚡ Plataforma Corporativa de Detección de Fraude Energético | DISICO Ingeniería S.A.",
+        "main_header": "Plataforma Corporativa de Detección de Fraude Energético",
+        "app_title": "Plataforma Corporativa de Detección de Fraude Energético",
+        "about_title": "Sobre el sistema",
         "intro_paragraph": (
             "Este sistema inteligente implementa el método de Distribución Gaussiana Multivariada (MGD) "
             "para detectar consumidores fraudulentos en servicios de energía, analizando la estratificación "
@@ -29,19 +33,22 @@ TRANSLATIONS = {
         "language_selector": "Idioma de la interfaz",
         "language_es": "Español",
         "language_en": "Inglés",
+        "theme_selector": "Tema",
+        "theme_light": "Modo Claro",
+        "theme_dark": "Modo Oscuro",
         "loading_data": "Cargando datos...",
         "analyzing_data": "Analizando datos...",
         "sidebar_header": "Controles de Detección de Fraude",
-        "sidebar_data_filters": "### 📅 Filtros de datos",
+        "sidebar_filters": "Filtros",
+        "sidebar_params": "Parámetros del modelo",
+        "sidebar_features": "Características",
         "filter_year": "Año",
         "filter_month": "Mes",
         "filter_zone": "Filtro de zona",
         "filter_zone_all": "Todas",
         "filter_zone_help": "Filtrar datos por zona geográfica específica",
-        "sidebar_model_params": "### ⚙️ Parámetros del modelo",
         "anomaly_threshold_label": "Factor de umbral de anomalía",
         "anomaly_threshold_help": "Valores bajos detectan más anomalías (pueden aumentar falsos positivos). Valores altos detectan menos, pero con mayor certeza.",
-        "sidebar_feature_selection": "### 🔍 Selección de características",
         "feature_consumption_label": "Consumo",
         "feature_consumption_help": "Incluir patrones de consumo en el análisis",
         "feature_stratification_label": "Estratificación",
@@ -53,7 +60,7 @@ TRANSLATIONS = {
         "error_select_feature": "Seleccione al menos una categoría de características para el análisis",
         "warning_no_data": "No hay datos disponibles para los filtros seleccionados. Intente con otros parámetros.",
         "warning_no_features_found": "No se encontraron características seleccionadas en los datos. Características disponibles: {available}",
-        "detection_results_header": "📊 Resultados de detección",
+        "detection_results_header": "Resultados de detección",
         "kpi_total_customers": "Total de clientes",
         "kpi_total_customers_trend": "Consumidores activos",
         "kpi_detection_rate": "Tasa de detección",
@@ -63,9 +70,12 @@ TRANSLATIONS = {
         "kpi_precision": "Tasa de acierto (Precisión)",
         "kpi_precision_trend": "Validación",
         "kpi_not_available": "N/D",
-        "tab_geospatial": "📍 Análisis geoespacial",
-        "tab_consumption": "📈 Análisis de consumo",
-        "tab_fraud": "🔎 Detección de fraude",
+        "tab_geo": "Análisis Geoespacial",
+        "tab_geo_full": "Análisis Geoespacial",
+        "tab_consumption": "Análisis de Consumo",
+        "tab_consumption_full": "Análisis de Consumo",
+        "tab_fraud": "Detección de Fraude",
+        "tab_fraud_full": "Detección de Fraude",
         "geo_subheader": "Distribución geográfica de anomalías",
         "geo_info_note": "**Nota:** Azul = consumidores normales, rojo = anomalías potencialmente fraudulentas.",
         "geo_error": "Error al mostrar el mapa: {error}",
@@ -79,7 +89,7 @@ TRANSLATIONS = {
         "stratum_distribution_title": "Distribución de anomalías por estrato socioeconómico",
         "feature_significance_header": "Análisis de relevancia de características",
         "feature_importance_title": "Importancia relativa de variables en la detección de anomalías",
-        "feature_importance_expander": "📚 Comprender la importancia de variables",
+        "feature_importance_expander": "Comprender la importancia de variables",
         "feature_importance_markdown": (
             "### Cómo interpretar la importancia de variables\n\n"
             "**La importancia de variables** en este modelo indica cuánto contribuye cada "
@@ -94,8 +104,8 @@ TRANSLATIONS = {
         "fraud_detected_header": "Consumidores fraudulentos detectados",
         "anomaly_process_error": "Error procesando los datos de anomalías: {error}",
         "anomaly_process_detail_unavailable": "La información detallada de anomalías no está disponible. Ajuste los filtros.",
-        "no_fraud_detected": "🔍 No se detectaron consumidores fraudulentos con el umbral actual. Pruebe bajar el umbral para identificar más anomalías.",
-        "no_fraud_detected_alt": "🔍 No se detectaron consumidores fraudulentos con el umbral actual. Ajuste parámetros o seleccione otros periodos.",
+        "no_fraud_detected": "No se detectaron consumidores fraudulentos con el umbral actual. Pruebe bajar el umbral para identificar más anomalías.",
+        "no_fraud_detected_alt": "No se detectaron consumidores fraudulentos con el umbral actual. Ajuste parámetros o seleccione otros periodos.",
         "understanding_fraud_header": "Comprender la detección de fraude",
         "fraud_detected_markdown": (
             "### Cómo se detecta el fraude\n\n"
@@ -117,7 +127,7 @@ TRANSLATIONS = {
             "- **Bajo** (0-39): Ligeramente inusual, puede explicarse por factores legítimos\n\n"
             "Los consumidores con mayor nivel de riesgo deben priorizarse para inspecciones de campo o revisiones técnicas."
         ),
-        "fraud_types_expander": "📋 Tipos de fraude detectados por el sistema",
+        "fraud_types_expander": "Tipos de fraude detectados por el sistema",
         "fraud_types_electricity_title": "Fraude en distribución eléctrica",
         "fraud_types_electricity_list": (
             "- **Manipulación del medidor** - Alteración física para reducir lecturas\n"
@@ -142,7 +152,7 @@ TRANSLATIONS = {
         "app_error_warning": "Intente con otros filtros o actualice la página.",
         "technical_details_expander": "Detalles técnicos",
         "technical_details_persist": "Si este error persiste, contacte al administrador del sistema.",
-        "about_expander": "ℹ️ Acerca del sistema",
+        "about_expander": "Acerca del sistema",
         "about_text": (
             "Esta plataforma de detección de fraude implementa el método de Distribución Gaussiana Multivariada "
             "descrito en investigaciones sobre detección de fraude en servicios públicos.\n\n"
@@ -151,9 +161,9 @@ TRANSLATIONS = {
             "Desarrollado para compañías distribuidoras con el fin de identificar posibles robos de energía y "
             "patrones de consumo fraudulentos mediante algoritmos avanzados de detección de anomalías."
         ),
-        "download_report_label": "📥 Descargar reporte",
+        "download_report_label": "Descargar reporte",
         "download_report_help": "Descargar el listado de consumidores fraudulentos detectados",
-        "report_ready_info": "📋 Reporte listo para descargar. El CSV contiene anomalías detectadas con su nivel de riesgo y patrones de consumo para investigación.",
+        "report_ready_info": "Reporte listo para descargar. El CSV contiene anomalías detectadas con su nivel de riesgo y patrones de consumo para investigación.",
         "risk_level_column": "Nivel de riesgo",
         "risk_level_critical": "Crítico",
         "risk_level_high": "Alto",
@@ -207,7 +217,9 @@ TRANSLATIONS = {
     },
     "EN": {
         "page_title": "Fraud Detection Platform | DISICO Ingeniería S.A.",
-        "main_header": "⚡ Corporate Energy Fraud Detection Platform | DISICO Ingeniería S.A.",
+        "main_header": "Corporate Energy Fraud Detection Platform | DISICO Ingeniería S.A.",
+        "app_title": "Corporate Energy Fraud Detection Platform",
+        "about_title": "About the system",
         "intro_paragraph": (
             "This intelligent system implements the Multivariate Gaussian Distribution (MGD) method "
             "to detect fraudulent consumers in energy utilities, analyzing socioeconomic stratification, "
@@ -216,19 +228,22 @@ TRANSLATIONS = {
         "language_selector": "Interface language",
         "language_es": "Spanish",
         "language_en": "English",
+        "theme_selector": "Theme",
+        "theme_light": "Light Mode",
+        "theme_dark": "Dark Mode",
         "loading_data": "Loading data...",
         "analyzing_data": "Analyzing data...",
         "sidebar_header": "Fraud Detection Controls",
-        "sidebar_data_filters": "### 📅 Data Filters",
+        "sidebar_filters": "Filters",
+        "sidebar_params": "Model parameters",
+        "sidebar_features": "Features",
         "filter_year": "Year",
         "filter_month": "Month",
         "filter_zone": "Zone Filter",
         "filter_zone_all": "All",
         "filter_zone_help": "Filter data by specific geographic zone",
-        "sidebar_model_params": "### ⚙️ Model Parameters",
         "anomaly_threshold_label": "Anomaly Threshold Factor",
         "anomaly_threshold_help": "Lower values detect more anomalies (may increase false positives). Higher values detect fewer, more certain anomalies.",
-        "sidebar_feature_selection": "### 🔍 Feature Selection",
         "feature_consumption_label": "Consumption",
         "feature_consumption_help": "Include consumption patterns in analysis",
         "feature_stratification_label": "Stratification",
@@ -240,7 +255,7 @@ TRANSLATIONS = {
         "error_select_feature": "Please select at least one feature category for analysis",
         "warning_no_data": "No data available for the selected filters. Please try different filter settings.",
         "warning_no_features_found": "No selected features found in data. Available features: {available}",
-        "detection_results_header": "📊 Detection Results",
+        "detection_results_header": "Detection Results",
         "kpi_total_customers": "Total Customers",
         "kpi_total_customers_trend": "Active consumers",
         "kpi_detection_rate": "Detection Rate",
@@ -250,9 +265,12 @@ TRANSLATIONS = {
         "kpi_precision": "Hit Rate (Precision)",
         "kpi_precision_trend": "Validation",
         "kpi_not_available": "N/A",
-        "tab_geospatial": "📍 Geospatial Analysis",
-        "tab_consumption": "📈 Consumption Analysis",
-        "tab_fraud": "🔎 Fraud Detection",
+        "tab_geo": "Geospatial Analysis",
+        "tab_geo_full": "Geospatial Analysis",
+        "tab_consumption": "Consumption Analysis",
+        "tab_consumption_full": "Consumption Analysis",
+        "tab_fraud": "Fraud Detection",
+        "tab_fraud_full": "Fraud Detection",
         "geo_subheader": "Geospatial distribution of anomalies",
         "geo_info_note": "**Note:** Blue = normal consumers, red = potentially fraudulent anomalies.",
         "geo_error": "Error displaying the map: {error}",
@@ -266,7 +284,7 @@ TRANSLATIONS = {
         "stratum_distribution_title": "Anomaly Distribution by Socioeconomic Stratum",
         "feature_significance_header": "Feature Significance Analysis",
         "feature_importance_title": "Relative Importance of Features in Anomaly Detection",
-        "feature_importance_expander": "📚 Understanding Feature Importance",
+        "feature_importance_expander": "Understanding Feature Importance",
         "feature_importance_markdown": (
             "### How to Interpret Feature Importance\n\n"
             "**Feature importance** in this model indicates how much each variable contributes to identifying fraudulent activity:\n\n"
@@ -279,8 +297,8 @@ TRANSLATIONS = {
         "fraud_detected_header": "Detected Fraudulent Consumers",
         "anomaly_process_error": "Error processing anomaly data: {error}",
         "anomaly_process_detail_unavailable": "Detailed anomaly information is not available. Try adjusting filter settings.",
-        "no_fraud_detected": "🔍 No fraudulent consumers detected with the current threshold. Try lowering the threshold to detect more potential anomalies.",
-        "no_fraud_detected_alt": "🔍 No fraudulent consumers detected with the current threshold. Try adjusting parameters or selecting different time periods.",
+        "no_fraud_detected": "No fraudulent consumers detected with the current threshold. Try lowering the threshold to detect more potential anomalies.",
+        "no_fraud_detected_alt": "No fraudulent consumers detected with the current threshold. Try adjusting parameters or selecting different time periods.",
         "understanding_fraud_header": "Understanding Fraud Detection",
         "fraud_detected_markdown": (
             "### How Fraud is Detected\n\n"
@@ -300,7 +318,7 @@ TRANSLATIONS = {
             "- **Low** (0-39): Slightly unusual but may be explained by legitimate factors\n\n"
             "Consumers with higher risk levels should be prioritized for field inspections or technical reviews."
         ),
-        "fraud_types_expander": "📋 Types of Fraud Detected by the System",
+        "fraud_types_expander": "Types of Fraud Detected by the System",
         "fraud_types_electricity_title": "Electricity Distribution Fraud",
         "fraud_types_electricity_list": (
             "- **Meter Tampering** - Physical manipulation of meters to reduce readings\n"
@@ -325,7 +343,7 @@ TRANSLATIONS = {
         "app_error_warning": "Please try different filter settings or refresh the page.",
         "technical_details_expander": "Technical Details",
         "technical_details_persist": "If this error persists, please contact the system administrator.",
-        "about_expander": "ℹ️ About This System",
+        "about_expander": "About This System",
         "about_text": (
             "This fraud detection platform implements the Multivariate Gaussian Distribution method described in "
             "research on fraudulent consumer detection in utilities.\n\n"
@@ -334,9 +352,9 @@ TRANSLATIONS = {
             "Developed for distribution companies to identify potential energy theft and fraudulent consumption patterns "
             "using advanced anomaly detection algorithms."
         ),
-        "download_report_label": "📥 Download Report",
+        "download_report_label": "Download Report",
         "download_report_help": "Download the list of detected fraudulent consumers",
-        "report_ready_info": "📋 Report ready for download. The CSV file contains detected anomalies with their risk levels and consumption patterns for further investigation.",
+        "report_ready_info": "Report ready for download. The CSV file contains detected anomalies with their risk levels and consumption patterns for further investigation.",
         "risk_level_column": "Risk Level",
         "risk_level_critical": "Critical",
         "risk_level_high": "High",
@@ -392,6 +410,8 @@ TRANSLATIONS = {
 
 if "language" not in st.session_state:
     st.session_state["language"] = "ES"
+if "theme_mode" not in st.session_state:
+    st.session_state["theme_mode"] = "LIGHT"
 
 def get_text(key):
     language = st.session_state.get("language", "ES")
@@ -408,6 +428,553 @@ def get_text(key):
         except Exception:
             print(warning_message)
     return TRANSLATIONS.get("EN", {}).get(key, key)
+
+def get_custom_icon():
+    return """<svg width="34" height="34" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" stroke="var(--icon-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>"""
+
+def get_svg(icon_name):
+    color = "var(--text-primary)"
+    accent = "var(--accent)"
+    icons = {
+        "geo": f'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="{accent}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l4-2 4 2 4-2 6 3v9l-6 3-4-2-4 2-4-2V7z"></path><path d="M9 5v12"></path><path d="M13 7v12"></path><path d="M21 10c0 4-9 10-9 10S3 14 3 10a9 9 0 1 1 18 0z"></path><circle cx="12" cy="10" r="2.5"></circle></svg>',
+        "consumption": f'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="{accent}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"></polyline><polyline points="16 7 21 7 21 12"></polyline><path d="M10 20l4-7h-3l3-6"></path></svg>',
+        "fraud": f'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="{accent}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><circle cx="10" cy="11" r="3"></circle><line x1="13" y1="14" x2="16.5" y2="17.5"></line></svg>',
+        "filters": f'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>',
+        "params": f'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>',
+        "features": f'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>',
+        "info": f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="{accent}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>'
+    }
+    return icons.get(icon_name, "")
+
+def get_theme_css(theme_mode):
+    if theme_mode == "DARK":
+        return """
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=Titillium+Web:wght@300;400;600;700&display=swap');
+        html, body, [class*="css"], .stApp {
+            font-family: 'Titillium Web', 'Segoe UI', 'Roboto', sans-serif !important;
+        }
+        h1, h2, h3, .header-title, .tab-hero-title {
+            font-weight: 700 !important;
+            letter-spacing: 0.02em;
+        }
+        :root {
+            --bg: #0E1117;
+            --text: #E0E0E0;
+            --text-primary: #E0E0E0;
+            --text-secondary: #B6BDC7;
+            --accent: #4DB6AC;
+            --card-bg: #181B21;
+            --card-border: rgba(255,255,255,0.10);
+            --card-shadow: 0 8px 24px rgba(0,0,0,0.35);
+            --bg-elev: rgba(255,255,255,0.05);
+            --bg-elev-strong: rgba(255,255,255,0.10);
+            --border-subtle: rgba(255,255,255,0.10);
+            --header-bg: linear-gradient(90deg, rgba(14,17,23,0), rgba(46,154,254,0.1), rgba(14,17,23,0));
+            --header-border: 1px solid rgba(255,255,255,0.1);
+            --icon-color: #4DB6AC;
+            --icon-fill: #4DB6AC;
+        }
+        .stApp, [data-testid="stAppViewContainer"] {
+            background: var(--bg) !important;
+            color: var(--text) !important;
+        }
+        header[data-testid="stHeader"] {
+            background-color: var(--bg) !important;
+            backdrop-filter: blur(10px);
+        }
+        .main-header, .sub-header {
+            color: var(--text-primary) !important;
+        }
+        section[data-testid="stSidebar"] {
+            background-color: #0B0E14 !important;
+            border-right: 1px solid rgba(255,255,255,0.08) !important;
+        }
+        .kpi-card, .chart-container, .dataframe-container {
+            background: var(--card-bg) !important;
+            border: 1px solid var(--card-border) !important;
+            box-shadow: var(--card-shadow) !important;
+        }
+        .metric-label, .metric-trend, .stMarkdown, p, span, label {
+            color: var(--text-secondary) !important;
+        }
+        .metric-value {
+            color: var(--text-primary) !important;
+        }
+        .stButton>button {
+            background-color: var(--accent) !important;
+            color: #0E1117 !important;
+            border: none !important;
+        }
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 8px !important;
+            background-color: transparent !important;
+            padding: 10px 10px 0 10px !important;
+            border-bottom: 4px solid var(--accent) !important;
+        }
+        .stTabs [data-baseweb="tab"] {
+            position: relative !important;
+            padding: 10px 24px 8px !important;
+            margin-right: 22px !important;
+            background-color: #151A22 !important;
+            color: #E0E0E0 !important;
+            border: none !important;
+            border-radius: 4px 4px 0 0 !important;
+            text-transform: uppercase !important;
+            font-weight: 700 !important;
+            overflow: visible !important;
+            z-index: 2;
+        }
+        .stTabs [data-baseweb="tab"] > div,
+        .stTabs [data-baseweb="tab"] span {
+            color: #E0E0E0 !important;
+        }
+        .stTabs [data-baseweb="tab"]::before,
+        .stTabs [data-baseweb="tab"]::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            height: 100%;
+            width: 28px;
+            background-color: #151A22 !important;
+            transition: all 200ms ease;
+            z-index: -1;
+        }
+        .stTabs [data-baseweb="tab"]::before {
+            right: -16px;
+            transform: skew(25deg, 0deg);
+            box-shadow: rgba(0,0,0,0.25) 2px 2px 6px;
+        }
+        .stTabs [data-baseweb="tab"]::after {
+            left: -16px;
+            transform: skew(-25deg, 0deg);
+            box-shadow: rgba(0,0,0,0.25) -2px 2px 6px;
+        }
+        .stTabs [data-baseweb="tab"][aria-selected="true"] {
+            background-color: #0E1117 !important;
+            color: #FFFFFF !important;
+        }
+        .stTabs [data-baseweb="tab"][aria-selected="true"]::before,
+        .stTabs [data-baseweb="tab"][aria-selected="true"]::after {
+            background-color: #0E1117 !important;
+        }
+        .stTabs [data-baseweb="tab"]:hover {
+            color: #FFFFFF !important;
+            background-color: #0E1117 !important;
+        }
+        .stTabs [data-baseweb="tab"]:hover::before,
+        .stTabs [data-baseweb="tab"]:hover::after {
+            background-color: #0E1117 !important;
+        }
+        .stTabs [data-baseweb="tab"][aria-selected="true"] > div,
+        .stTabs [data-baseweb="tab"][aria-selected="true"] span,
+        .stTabs [data-baseweb="tab"]:hover > div,
+        .stTabs [data-baseweb="tab"]:hover span {
+            color: #FFFFFF !important;
+        }
+        div[data-testid="stExpander"] {
+            background-color: transparent !important;
+            border: none !important;
+        }
+        div[data-testid="stExpander"] > details > summary {
+            background-color: var(--bg-elev) !important;
+            border-radius: 12px !important;
+            border: 1px solid var(--border-subtle) !important;
+            padding: 12px 20px !important;
+            transition: all 0.3s ease;
+            list-style: none !important;
+            color: var(--text-primary) !important;
+        }
+        div[data-testid="stExpander"] > details[open] > summary {
+            background-color: var(--bg-elev-strong) !important;
+            border: 1px solid var(--accent) !important;
+            color: var(--accent) !important;
+        }
+        div[data-testid="stExpander"] > details > summary svg {
+            fill: var(--text-secondary) !important;
+            transition: transform 0.3s ease, fill 0.3s ease;
+        }
+        div[data-testid="stExpander"] > details[open] > summary svg {
+            fill: var(--accent) !important;
+            transform: rotate(90deg);
+        }
+        div[data-testid="stExpander"] > details > div {
+            border: none !important;
+            padding: 1rem;
+        }
+        .section-header {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 12px;
+            margin-top: 10px;
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        .section-header span {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.01em;
+        }
+        .tab-hero {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px 20px;
+            background: linear-gradient(90deg, var(--bg-elev) 0%, transparent 100%);
+            border-left: 5px solid var(--accent);
+            border-radius: 0 8px 8px 0;
+            margin-bottom: 25px;
+            margin-top: 10px;
+        }
+        .tab-hero svg {
+            stroke: var(--accent);
+            width: 34px;
+            height: 34px;
+            filter: drop-shadow(0 0 5px rgba(0,0,0,0.1));
+        }
+        .tab-hero-title {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 2rem;
+            margin-bottom: 0.8rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-secondary);
+        }
+        .info-box {
+            background-color: var(--bg-elev);
+            border-left: 3px solid var(--accent);
+            padding: 1.25rem;
+            border-radius: 4px 12px 12px 4px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .info-box-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+        .info-box-content {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        .main-header {
+            background: var(--header-bg);
+            border-top: var(--header-border);
+            border-bottom: var(--header-border);
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+        }
+        .header-text-col {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: center;
+        }
+        .header-company {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 600;
+            margin-bottom: 0.2rem;
+        }
+        .header-title {
+            color: var(--text-primary);
+            font-size: 1.6rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin: 0;
+        }
+        </style>
+        """
+
+    return """
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Titillium+Web:wght@300;400;600;700&display=swap');
+    html, body, [class*="css"], .stApp {
+        font-family: 'Titillium Web', 'Segoe UI', 'Roboto', sans-serif !important;
+    }
+    h1, h2, h3, .header-title, .tab-hero-title {
+        font-weight: 700 !important;
+        letter-spacing: 0.02em;
+    }
+    :root {
+        --bg: #F0F2F6;
+        --text: #31333F;
+        --text-primary: #31333F;
+        --text-secondary: #5B6070;
+        --accent: #111724;
+        --card-bg: #FFFFFF;
+        --card-border: rgba(0,0,0,0.08);
+        --card-shadow: 0 6px 18px rgba(0,0,0,0.08);
+        --bg-elev: #FFFFFF;
+        --bg-elev-strong: #F8F9FA;
+        --border-subtle: rgba(0,0,0,0.08);
+        --header-bg: linear-gradient(90deg, rgba(255,255,255,0), rgba(0,86,179,0.05), rgba(255,255,255,0));
+        --header-border: 1px solid rgba(0,0,0,0.05);
+        --icon-color: #0056b3;
+        --icon-fill: #0056b3;
+    }
+    .stApp, [data-testid="stAppViewContainer"] {
+        background: var(--bg) !important;
+        color: var(--text) !important;
+    }
+    header[data-testid="stHeader"] {
+        background-color: var(--bg) !important;
+        backdrop-filter: blur(10px);
+    }
+    .main-header, .sub-header {
+        color: var(--accent) !important;
+    }
+    section[data-testid="stSidebar"] {
+        background-color: #E9EDF5 !important;
+        border-right: 1px solid rgba(0,0,0,0.08) !important;
+    }
+    .kpi-card, .chart-container, .dataframe-container {
+        background: var(--card-bg) !important;
+        border: 1px solid var(--card-border) !important;
+        box-shadow: var(--card-shadow) !important;
+    }
+    .metric-label, .metric-trend, .stMarkdown, p, span, label {
+        color: #5B6070 !important;
+    }
+    .metric-value {
+        color: var(--text) !important;
+    }
+    .stButton>button {
+        background-color: var(--accent) !important;
+        color: #FFFFFF !important;
+        border: none !important;
+    }
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px !important;
+        background-color: transparent !important;
+        padding: 10px 10px 0 10px !important;
+        border-bottom: 4px solid var(--accent) !important;
+    }
+    .stTabs [data-baseweb="tab"] {
+        position: relative !important;
+        padding: 10px 24px 8px !important;
+        margin-right: 22px !important;
+        background-color: #F8F9FA !important;
+        color: #222 !important;
+        border: none !important;
+        border-radius: 4px 4px 0 0 !important;
+        text-transform: uppercase !important;
+        font-weight: 700 !important;
+        overflow: visible !important;
+        z-index: 2;
+    }
+    .stTabs [data-baseweb="tab"] > div,
+    .stTabs [data-baseweb="tab"] span {
+        color: #222 !important;
+    }
+    .stTabs [data-baseweb="tab"]::before,
+    .stTabs [data-baseweb="tab"]::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        height: 100%;
+        width: 28px;
+        background-color: #F8F9FA !important;
+        transition: all 200ms ease;
+        z-index: -1;
+    }
+    .stTabs [data-baseweb="tab"]::before {
+        right: -16px;
+        transform: skew(25deg, 0deg);
+        box-shadow: rgba(0,0,0,0.15) 2px 2px 6px;
+    }
+    .stTabs [data-baseweb="tab"]::after {
+        left: -16px;
+        transform: skew(-25deg, 0deg);
+        box-shadow: rgba(0,0,0,0.15) -2px 2px 6px;
+    }
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {
+        background-color: var(--accent) !important;
+        color: #FFFFFF !important;
+    }
+    .stTabs [data-baseweb="tab"][aria-selected="true"]::before,
+    .stTabs [data-baseweb="tab"][aria-selected="true"]::after {
+        background-color: var(--accent) !important;
+    }
+    .stTabs [data-baseweb="tab"]:hover {
+        color: #FFFFFF !important;
+        background-color: var(--accent) !important;
+    }
+    .stTabs [data-baseweb="tab"]:hover::before,
+    .stTabs [data-baseweb="tab"]:hover::after {
+        background-color: var(--accent) !important;
+    }
+    .stTabs [data-baseweb="tab"][aria-selected="true"] > div,
+    .stTabs [data-baseweb="tab"][aria-selected="true"] span,
+    .stTabs [data-baseweb="tab"]:hover > div,
+    .stTabs [data-baseweb="tab"]:hover span {
+        color: #FFFFFF !important;
+    }
+    div[data-testid="stExpander"] {
+        background-color: transparent !important;
+        border: none !important;
+    }
+    div[data-testid="stExpander"] > details > summary {
+        background-color: var(--bg-elev) !important;
+        border-radius: 12px !important;
+        border: 1px solid var(--border-subtle) !important;
+        padding: 12px 20px !important;
+        transition: all 0.3s ease;
+        list-style: none !important;
+        color: var(--text-primary) !important;
+    }
+    div[data-testid="stExpander"] > details[open] > summary {
+        background-color: var(--bg-elev-strong) !important;
+        border: 1px solid var(--accent) !important;
+        color: var(--accent) !important;
+    }
+    div[data-testid="stExpander"] > details > summary svg {
+        fill: var(--text-secondary) !important;
+        transition: transform 0.3s ease, fill 0.3s ease;
+    }
+    div[data-testid="stExpander"] > details[open] > summary svg {
+        fill: var(--accent) !important;
+        transform: rotate(90deg);
+    }
+    div[data-testid="stExpander"] > details > div {
+        border: none !important;
+        padding: 1rem;
+    }
+    .section-header {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 12px;
+        margin-top: 10px;
+        margin-bottom: 25px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--border-subtle);
+    }
+    .section-header span {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        letter-spacing: -0.01em;
+    }
+    .tab-hero {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 15px 20px;
+        background: linear-gradient(90deg, var(--bg-elev) 0%, transparent 100%);
+        border-left: 5px solid var(--accent);
+        border-radius: 0 8px 8px 0;
+        margin-bottom: 25px;
+        margin-top: 10px;
+    }
+    .tab-hero svg {
+        stroke: var(--accent);
+        width: 34px;
+        height: 34px;
+        filter: drop-shadow(0 0 5px rgba(0,0,0,0.1));
+    }
+    .tab-hero-title {
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .sidebar-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 2rem;
+        margin-bottom: 0.8rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--text-secondary);
+    }
+    .info-box {
+        background-color: var(--bg-elev);
+        border-left: 3px solid var(--accent);
+        padding: 1.25rem;
+        border-radius: 4px 12px 12px 4px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .info-box-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+        font-size: 1rem;
+    }
+    .info-box-content {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+    .main-header {
+        background: var(--header-bg);
+        border-top: var(--header-border);
+        border-bottom: var(--header-border);
+        padding: 1.5rem 2rem;
+        margin-bottom: 2rem;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        gap: 1.5rem;
+    }
+    .header-text-col {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+    }
+    .header-company {
+        color: var(--text-secondary);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        font-weight: 600;
+        margin-bottom: 0.2rem;
+    }
+    .header-title {
+        color: var(--text-primary);
+        font-size: 1.6rem;
+        font-weight: 800;
+        line-height: 1.1;
+        margin: 0;
+    }
+    </style>
+    """
 
 # Set page configuration
 st.set_page_config(
@@ -431,21 +998,25 @@ selected_language = st.sidebar.selectbox(
 )
 st.session_state["language"] = selected_language
 
+# Theme selector (sidebar)
+current_theme = st.session_state.get("theme_mode", "LIGHT")
+theme_options = ["LIGHT", "DARK"]
+selected_theme = st.sidebar.radio(
+    get_text("theme_selector"),
+    theme_options,
+    index=0 if current_theme == "LIGHT" else 1,
+    format_func=lambda code: get_text("theme_light") if code == "LIGHT" else get_text("theme_dark")
+)
+st.session_state["theme_mode"] = selected_theme
+
+# Apply theme CSS and Plotly template
+st.markdown(get_theme_css(st.session_state["theme_mode"]), unsafe_allow_html=True)
+pio.templates.default = "plotly_white" if st.session_state["theme_mode"] == "LIGHT" else "plotly_dark"
+
 # Custom CSS with improved styling
 st.markdown("""
 <style>
     /* Main header styling */
-    .main-header {
-        font-size: 2.8rem;
-        color: #0066cc;
-        font-weight: bold;
-        margin-bottom: 1rem;
-        text-align: center;
-        padding: 1rem 0;
-        background: linear-gradient(90deg, #f8f9fa, #e9ecef, #f8f9fa);
-        border-radius: 10px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    }
     
     /* Sub-header styling */
     .sub-header {
@@ -584,21 +1155,6 @@ st.markdown("""
     }
     
     /* Tabs styling */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 2px;
-    }
-    
-    .stTabs [data-baseweb="tab"] {
-        background-color: #f8f9fa;
-        border-radius: 5px 5px 0px 0px;
-        padding: 10px 20px;
-        font-weight: 600;
-    }
-    
-    .stTabs [aria-selected="true"] {
-        background-color: #0066cc;
-        color: white;
-    }
     
     /* Tooltip styling */
     .tooltip {
@@ -641,22 +1197,29 @@ st.markdown("""
     }
     
     /* Improved sidebar header */
-    .sidebar-header {
-        background-color: #0066cc;
-        color: white;
-        padding: 15px;
-        margin: -1rem -1rem 1rem -1rem;
-        border-radius: 0 0 10px 0;
-        font-weight: bold;
-        font-size: 1.2rem;
-        text-align: center;
-    }
 </style>
 """, unsafe_allow_html=True)
 
 # Title and introduction
-st.markdown(f"<div class='main-header'>{get_text('main_header')}</div>", unsafe_allow_html=True)
-st.markdown(get_text("intro_paragraph"))
+header_html = textwrap.dedent(f"""
+    <div class="main-header">
+        <div class="header-icon">
+            {get_custom_icon()}
+        </div>
+        <div class="header-text-col">
+            <div class="header-company">DISICO INGENIERÍA S.A.</div>
+            <div class="header-title">{get_text('app_title')}</div>
+        </div>
+    </div>
+""").strip()
+
+st.markdown(header_html, unsafe_allow_html=True)
+st.markdown(f"""
+<div class="info-box">
+    <div class="info-box-title">{get_svg('info')} {get_text('about_title')}</div>
+    <div class="info-box-content">{get_text('intro_paragraph')}</div>
+</div>
+""", unsafe_allow_html=True)
 
 # Main function
 def main():
@@ -670,9 +1233,7 @@ def main():
     weather_df = st.session_state.weather_df
     
     # Sidebar filters and styling
-    st.sidebar.markdown(f"<div class='sidebar-header'>{get_text('sidebar_header')}</div>", unsafe_allow_html=True)
-    
-    st.sidebar.markdown(get_text("sidebar_data_filters"))
+    st.sidebar.markdown(f"<div class='sidebar-header'>{get_svg('filters')} {get_text('sidebar_filters')}</div>", unsafe_allow_html=True)
     
     # Filter by date with improved UI
     col1, col2 = st.sidebar.columns(2)
@@ -693,7 +1254,7 @@ def main():
     selected_zone = None if selected_zone_option == get_text("filter_zone_all") else selected_zone_option
     
     # MGD parameters with improved sliders
-    st.sidebar.markdown(get_text("sidebar_model_params"))
+    st.sidebar.markdown(f"<div class='sidebar-header'>{get_svg('params')} {get_text('sidebar_params')}</div>", unsafe_allow_html=True)
     anomaly_threshold_factor = st.sidebar.slider(
         get_text("anomaly_threshold_label"),
         min_value=1.5, 
@@ -704,7 +1265,7 @@ def main():
     )
     
     # Feature selection with better organization
-    st.sidebar.markdown(get_text("sidebar_feature_selection"))
+    st.sidebar.markdown(f"<div class='sidebar-header'>{get_svg('features')} {get_text('sidebar_features')}</div>", unsafe_allow_html=True)
     
     feature_col1, feature_col2 = st.sidebar.columns(2)
     
@@ -863,10 +1424,15 @@ def main():
         st.markdown("</div>", unsafe_allow_html=True)
         
         # Create tabs for better organization
-        tab1, tab2, tab3 = st.tabs([get_text("tab_geospatial"), get_text("tab_consumption"), get_text("tab_fraud")])
+        tab1, tab2, tab3 = st.tabs([get_text("tab_geo"), get_text("tab_consumption"), get_text("tab_fraud")])
 
         with tab1:
-            st.markdown(f"<div class='sub-header'>{get_text('geo_subheader')}</div>", unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="tab-hero">
+                <div style="display:flex; align-items:center;">{get_svg('geo')}</div>
+                <div class="tab-hero-title">{get_text('tab_geo')}</div>
+            </div>
+            """, unsafe_allow_html=True)
             
             try:
                 # Aseguramos que los tamaños coincidan
@@ -924,7 +1490,12 @@ def main():
             
         with tab2:
             # Consumption Analysis Tab
-            st.markdown(f"<div class='sub-header'>{get_text('consumption_subheader')}</div>", unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="tab-hero">
+                <div style="display:flex; align-items:center;">{get_svg('consumption')}</div>
+                <div class="tab-hero-title">{get_text('tab_consumption')}</div>
+            </div>
+            """, unsafe_allow_html=True)
             
             # Improved layout with 2x2 grid
             col1, col2 = st.columns(2)
@@ -1056,6 +1627,12 @@ def main():
             
         with tab3:
             # Fraud Detection Tab
+            st.markdown(f"""
+            <div class="tab-hero">
+                <div style="display:flex; align-items:center;">{get_svg('fraud')}</div>
+                <div class="tab-hero-title">{get_text('tab_fraud')}</div>
+            </div>
+            """, unsafe_allow_html=True)
             st.markdown(f"<div class='sub-header'>{get_text('fraud_detected_header')}</div>", unsafe_allow_html=True)
             
             # Display anomalous customers (only if we have anomalies)
