@@ -1,30 +1,27 @@
-# Usamos una versión "slim" de Python para reducir el tamaño de la imagen de ~1GB a ~150MB
+# Usamos una versión "slim" de Python para mantener la ligereza
 FROM python:3.11-slim
 
-# Variables de entorno para optimizar Python en contenedores
+# Variables de entorno para optimizar Python
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 # Directorio de trabajo
 WORKDIR /app
 
-# Instalamos dependencias del sistema mínimas para compilación de librerías como scikit-learn
+# Instalamos solo lo esencial: build-essential para compilar librerías de C
 RUN apt-get update && apt-get install -y \
     build-essential \
-    curl \
-    software-properties-common \
     && rm -rf /var/lib/apt/lists/*
 
-# Copiamos solo los requisitos primero para cachear la instalación de librerías
+# Copiamos los requisitos e instalamos
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiamos el resto del código (incluyendo las carpetas 'modules' y 'data')
+# Copiamos el resto del código del proyecto
 COPY . .
 
-# Exponemos el puerto estándar de Streamlit
+# Exponemos el puerto de Streamlit
 EXPOSE 8501
 
-# Comando de ejecución con optimizaciones para producción
-# Usamos 0.0.0.0 para que sea accesible externamente
+# Comando de ejecución
 ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.enableCORS=false", "--server.enableXsrfProtection=false"]
